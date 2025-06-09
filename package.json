@@ -11,8 +11,7 @@
     "start": "pnpm --filter web start",
     "lint": "pnpm --filter web lint",
     "test": "pnpm --recursive test",
-    "typecheck": "pnpm --recursive typecheck",
-    "prepare": "husky"
+    "typecheck": "pnpm --recursive typecheck"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -27,16 +26,13 @@
     "typescript": "^5"
   },
   "packageManager": "pnpm@8.0.0",
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
-  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.50.0"
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.50.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.0"
   }
 }
