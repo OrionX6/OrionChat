@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { Sidebar } from "./Sidebar";
-import { ModelSelector } from "./ModelSelector";
+import { WelcomeScreen } from "./WelcomeScreen";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_MODEL, ModelProvider } from "@/lib/constants/models";
@@ -23,6 +23,7 @@ export function ChatWindow() {
   const streamingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const streamingBufferRef = useRef<string>('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -446,48 +447,44 @@ export function ChatWindow() {
       <div className="flex-1 flex flex-col">
         {currentConversation ? (
           <>
-            {/* Chat Header */}
-            <div className="border-b px-4 py-3 bg-card">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">{currentConversation.title}</h2>
-                <ModelSelector
-                  selectedModel={currentConversation.model_name}
-                  onModelChange={handleModelChange}
-                  disabled={loading}
-                />
-              </div>
-            </div>
 
-            {/* Messages */}
+            {/* Messages or Welcome Screen */}
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4"
+              className="flex-1 overflow-y-auto p-6"
             >
-              {messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
+              {messages.length === 0 && !isTyping && !isStreaming && !loading ? (
+                /* Welcome Screen in conversation */
+                <WelcomeScreen
+                  onSuggestionClick={handleSendMessage}
+                />
+              ) : (
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {messages.map((message) => (
+                    <MessageBubble key={message.id} message={message} />
+                  ))}
 
               {/* Streaming Message */}
               {isStreaming && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-xs">AI</span>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-medium">AI</span>
                   </div>
-                  <div className="flex flex-col items-start max-w-[70%]">
-                    <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 min-h-[2rem] flex items-start">
+                  <div className="flex flex-col items-start max-w-[75%] min-w-0">
+                    <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start">
                       {streamingMessage ? (
-                        <p className="text-sm whitespace-pre-wrap">{streamingMessage}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{streamingMessage}</p>
                       ) : (
                         <div className="flex space-x-1 items-center">
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
                         </div>
                       )}
                       {/* Smooth cursor indicator */}
                       <span className="inline-block w-0.5 h-4 bg-primary/70 animate-pulse ml-1 mt-0.5"></span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-muted-foreground">
                         {new Date().toLocaleTimeString([], {
                           hour: "2-digit",
@@ -495,7 +492,7 @@ export function ChatWindow() {
                         })}
                       </span>
                       {currentConversation && (
-                        <span className="text-xs text-muted-foreground bg-muted/50 px-1 rounded">
+                        <span className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">
                           {currentConversation.model_name}
                         </span>
                       )}
@@ -506,43 +503,40 @@ export function ChatWindow() {
 
               {/* Loading Indicator */}
               {loading && !isStreaming && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <span className="text-xs">AI</span>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-medium">AI</span>
                   </div>
-                  <div className="bg-muted rounded-lg px-3 py-2">
+                  <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Scroll anchor */}
-              <div ref={messagesEndRef} />
+                  {/* Scroll anchor */}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
             </div>
 
             {/* Input */}
-            <ChatInput onSend={handleSendMessage} disabled={loading} />
+            <ChatInput
+              onSend={handleSendMessage}
+              disabled={loading}
+              onTypingChange={setIsTyping}
+              currentConversation={currentConversation}
+              onModelChange={handleModelChange}
+            />
           </>
         ) : (
           /* Welcome Screen */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center max-w-md">
-              <h2 className="text-2xl font-semibold mb-4">Welcome to OrionChat</h2>
-              <p className="text-muted-foreground mb-6">
-                Start a new conversation to begin chatting with AI models.
-              </p>
-              <button
-                onClick={createNewConversation}
-                className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-              >
-                Start New Chat
-              </button>
-            </div>
-          </div>
+          <WelcomeScreen
+            onSuggestionClick={handleSendMessage}
+          />
         )}
       </div>
     </div>

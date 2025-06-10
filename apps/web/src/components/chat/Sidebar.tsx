@@ -80,16 +80,16 @@ export function Sidebar({
   };
 
   return (
-    <div className="w-80 bg-card border-r flex flex-col h-full">
+    <div className="w-80 bg-card/50 border-r border-border/50 flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-6 border-b border-border/50">
         <Button
           onClick={onNewConversation}
-          className="w-full flex items-center gap-2"
+          className="w-full flex items-center gap-2 h-11 text-sm font-medium"
           disabled={loading}
         >
           <Plus className="h-4 w-4" />
-          New Conversation
+          New Chat
         </Button>
       </div>
 
@@ -104,13 +104,13 @@ export function Sidebar({
             ))}
           </div>
         ) : conversations.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground">
-            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No conversations yet</p>
-            <p className="text-xs">Start a new conversation to get started</p>
+          <div className="p-6 text-center text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p className="text-sm font-medium mb-1">No conversations yet</p>
+            <p className="text-xs">Start a new chat to get started</p>
           </div>
         ) : (
-          <div className="p-2 space-y-1">
+          <div className="p-3 space-y-2">
             {conversations.map((conversation) => {
               const isSelected = currentConversation?.id === conversation.id;
               const isEditing = editingId === conversation.id;
@@ -120,10 +120,10 @@ export function Sidebar({
                 <div
                   key={conversation.id}
                   className={cn(
-                    "group relative rounded-lg p-3 cursor-pointer transition-colors",
+                    "group relative rounded-xl p-4 cursor-pointer transition-all duration-200",
                     isSelected
-                      ? "bg-primary/10 border border-primary/20"
-                      : "hover:bg-muted/50"
+                      ? "bg-primary/10 border border-primary/20 shadow-sm"
+                      : "hover:bg-muted/30 hover:shadow-sm"
                   )}
                   onClick={() => !isEditing && onConversationSelect(conversation)}
                 >
@@ -176,7 +176,7 @@ export function Sidebar({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={(e) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
                               handleStartEdit(conversation);
                             }}
@@ -185,7 +185,7 @@ export function Sidebar({
                             Rename
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={(e) => {
+                            onClick={(e: React.MouseEvent) => {
                               e.stopPropagation();
                               onDeleteConversation(conversation.id);
                             }}
