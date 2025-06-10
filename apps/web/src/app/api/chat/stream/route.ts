@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { LLMRouter } from '@orion-chat/llm-adapters';
-import type { ChatMessage } from '@orion-chat/shared-types';
+import type { ChatMessage } from '@orion-chat/shared-types/src/llm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
       return new Response('Missing required parameters', { status: 400 });
     }
 
-    // Verify conversation belongs to user
+    // Verify conversation belongs to user (optimized query)
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('*')
+      .select('max_tokens, temperature, message_count, total_tokens_used')
       .eq('id', conversationId)
       .eq('user_id', user.id)
       .single();
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Convert messages to the format expected by LLM providers
-    const chatMessages: ChatMessage[] = messages.map((msg: any) => ({
+    const chatMessages: ChatMessage[] = messages.map((msg: { role: 'user' | 'assistant' | 'system'; content: string; metadata?: Record<string, unknown> }) => ({
       role: msg.role,
       content: msg.content,
       metadata: msg.metadata || {}
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           // Stream the response from the LLM
           for await (const chunk of router.stream({
             messages: chatMessages,
-            provider: provider as any,
+            provider: provider as 'openai' | 'anthropic' | 'google' | 'deepseek',
             model,
             userId: user.id,
             conversationId,
@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
             }
           })) {
             fullResponse += chunk.content;
-            tokenCount += 1; // Rough estimate
+            tokenCount += 1;
             
-            // Send chunk to client
+            // Send chunk to client immediately
             const data = JSON.stringify({
               content: chunk.content,
               done: chunk.done
@@ -86,47 +86,43 @@ export async function POST(request: NextRequest) {
               const endTime = Date.now();
               const responseTime = endTime - startTime;
 
-              // Save the assistant's response to the database
-              const { data: savedMessage, error: messageError } = await supabase
-                .from('messages')
-                .insert({
-                  conversation_id: conversationId,
-                  user_id: user.id,
-                  role: 'assistant',
-                  content: fullResponse,
-                  provider: provider,
-                  model: model,
-                  tokens_used: tokenCount,
-                  response_time_ms: responseTime,
-                  finish_reason: 'stop'
-                })
-                .select()
-                .single();
+              // Perform database operations asynchronously (don't await)
+              Promise.all([
+                // Save the assistant's response
+                supabase
+                  .from('messages')
+                  .insert({
+                    conversation_id: conversationId,
+                    user_id: user.id,
+                    role: 'assistant',
+                    content: fullResponse,
+                    provider: provider,
+                    model: model,
+                    tokens_used: tokenCount,
+                    response_time_ms: responseTime,
+                    finish_reason: 'stop'
+                  })
+                  .select('id')
+                  .single(),
+                // Update conversation stats
+                supabase
+                  .from('conversations')
+                  .update({
+                    updated_at: new Date().toISOString(),
+                    last_message_at: new Date().toISOString(),
+                    message_count: (conversation.message_count || 0) + 1,
+                    total_tokens_used: (conversation.total_tokens_used || 0) + tokenCount
+                  })
+                  .eq('id', conversationId)
+              ]).catch(error => {
+                console.error('Error saving message data:', error);
+              });
 
-              if (messageError) {
-                console.error('Error saving assistant message:', messageError);
-              }
-
-              // Update conversation stats
-              const { error: updateError } = await supabase
-                .from('conversations')
-                .update({
-                  updated_at: new Date().toISOString(),
-                  last_message_at: new Date().toISOString(),
-                  message_count: (conversation.message_count || 0) + 1,
-                  total_tokens_used: (conversation.total_tokens_used || 0) + tokenCount
-                })
-                .eq('id', conversationId);
-
-              if (updateError) {
-                console.error('Error updating conversation:', updateError);
-              }
-
-              // Send final completion signal
+              // Send final completion signal immediately
               const finalData = JSON.stringify({
                 content: '',
                 done: true,
-                messageId: savedMessage?.id
+                messageId: 'pending' // Will be updated on client side
               });
               controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 

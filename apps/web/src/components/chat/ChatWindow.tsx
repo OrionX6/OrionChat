@@ -267,13 +267,16 @@ export function ChatWindow() {
         content: msg.content
       }));
 
-      // Start streaming
+      // Start streaming immediately with optimized settings
       setIsStreaming(true);
       setStreamingMessage('');
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         body: JSON.stringify({
           messages: conversationMessages,
           conversationId: conversation.id,
@@ -292,14 +295,18 @@ export function ChatWindow() {
       }
 
       let accumulatedContent = '';
+      let chunkBuffer = '';
 
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
+          chunkBuffer += new TextDecoder().decode(value, { stream: true });
+          const lines = chunkBuffer.split('\n');
+          
+          // Keep incomplete line in buffer
+          chunkBuffer = lines.pop() || '';
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -312,13 +319,16 @@ export function ChatWindow() {
 
                 if (data.content) {
                   accumulatedContent += data.content;
+                  // Update streaming message immediately without debouncing
                   setStreamingMessage(accumulatedContent);
                 }
 
                 if (data.done) {
-                  // Streaming complete - create the final AI message
+                  // Generate client-side ID for immediate display
+                  const tempId = 'ai-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+                  
                   const aiMessage: Message = {
-                    id: data.messageId || 'ai-' + Date.now(),
+                    id: tempId,
                     conversation_id: conversation.id,
                     user_id: user.id,
                     role: 'assistant',
