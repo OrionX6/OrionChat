@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { Sidebar } from "./Sidebar";
@@ -20,6 +20,8 @@ export function ChatWindow() {
   const [loading, setLoading] = useState(false);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
+  const streamingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const streamingBufferRef = useRef<string>('');
   const [isStreaming, setIsStreaming] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
@@ -45,11 +47,23 @@ export function ChatWindow() {
     scrollToBottom();
   }, [messages, streamingMessage]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }, []);
+
+  const updateStreamingMessage = useCallback((content: string) => {
+    streamingBufferRef.current = content;
+    
+    if (streamingTimeoutRef.current) {
+      clearTimeout(streamingTimeoutRef.current);
+    }
+    
+    streamingTimeoutRef.current = setTimeout(() => {
+      setStreamingMessage(streamingBufferRef.current);
+    }, 16); // ~60fps updates
+  }, []);
 
   const loadConversations = async () => {
     if (!user) return;
@@ -305,38 +319,94 @@ export function ChatWindow() {
 
                 if (data.content) {
                   accumulatedContent += data.content;
-                  setStreamingMessage(accumulatedContent);
+                  updateStreamingMessage(accumulatedContent);
                 }
 
                 if (data.done) {
-                  // Streaming is complete, create final message and add to messages
+                  // Clear any pending timeouts
+                  if (streamingTimeoutRef.current) {
+                    clearTimeout(streamingTimeoutRef.current);
+                  }
+                  
+                  // Streaming is complete
                   setIsStreaming(false);
-
-                  // Create the final assistant message
-                  const finalMessage: Message = {
-                    id: data.messageId || 'final-' + Date.now(),
-                    conversation_id: conversation.id,
-                    user_id: user.id,
-                    role: 'assistant',
-                    content: accumulatedContent,
-                    provider: conversation.model_provider,
-                    model: conversation.model_name,
-                    tokens_used: 0,
-                    cost_usd: null,
-                    response_time_ms: null,
-                    finish_reason: 'stop',
-                    tool_calls: null,
-                    attachments: null,
-                    embedding: null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  };
-
-                  // Add the final message to the messages array
-                  setMessages(prev => [...prev, finalMessage]);
                   setStreamingMessage('');
 
-                  // Update conversation metadata without reloading messages
+                  // If we have a messageId from the server, fetch the complete message
+                  if (data.messageId) {
+                    const { data: savedMessage, error: fetchError } = await supabase
+                      .from('messages')
+                      .select('*')
+                      .eq('id', data.messageId)
+                      .single();
+                    
+                    if (!fetchError && savedMessage) {
+                      // Check if message already exists to prevent duplicates
+                      setMessages(prev => {
+                        const exists = prev.some(msg => msg.id === savedMessage.id);
+                        if (exists) {
+                          return prev;
+                        }
+                        return [...prev, savedMessage];
+                      });
+                    } else {
+                      // Fallback: create message from accumulated content
+                      const fallbackMessage: Message = {
+                        id: data.messageId,
+                        conversation_id: conversation.id,
+                        user_id: user.id,
+                        role: 'assistant',
+                        content: accumulatedContent,
+                        provider: conversation.model_provider,
+                        model: conversation.model_name,
+                        tokens_used: 0,
+                        cost_usd: null,
+                        response_time_ms: null,
+                        finish_reason: 'stop',
+                        tool_calls: null,
+                        attachments: null,
+                        embedding: null,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      };
+                      setMessages(prev => {
+                        const exists = prev.some(msg => msg.id === fallbackMessage.id);
+                        if (exists) {
+                          return prev;
+                        }
+                        return [...prev, fallbackMessage];
+                      });
+                    }
+                  } else {
+                    // No messageId provided, create fallback message
+                    const fallbackMessage: Message = {
+                      id: 'local-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11),
+                      conversation_id: conversation.id,
+                      user_id: user.id,
+                      role: 'assistant',
+                      content: accumulatedContent,
+                      provider: conversation.model_provider,
+                      model: conversation.model_name,
+                      tokens_used: 0,
+                      cost_usd: null,
+                      response_time_ms: null,
+                      finish_reason: 'stop',
+                      tool_calls: null,
+                      attachments: null,
+                      embedding: null,
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    };
+                    setMessages(prev => {
+                      const exists = prev.some(msg => msg.id === fallbackMessage.id);
+                      if (exists) {
+                        return prev;
+                      }
+                      return [...prev, fallbackMessage];
+                    });
+                  }
+
+                  // Update conversation metadata
                   await updateConversationMetadata(conversation.id);
                   break;
                 }
@@ -398,16 +468,24 @@ export function ChatWindow() {
               ))}
 
               {/* Streaming Message */}
-              {isStreaming && streamingMessage && (
+              {isStreaming && (
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                     <span className="text-xs">AI</span>
                   </div>
                   <div className="flex flex-col items-start max-w-[70%]">
-                    <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2">
-                      <p className="text-sm whitespace-pre-wrap">{streamingMessage}</p>
-                      {/* Typing indicator */}
-                      <span className="inline-block w-2 h-4 bg-muted-foreground/50 animate-pulse ml-1"></span>
+                    <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 min-h-[2rem] flex items-start">
+                      {streamingMessage ? (
+                        <p className="text-sm whitespace-pre-wrap">{streamingMessage}</p>
+                      ) : (
+                        <div className="flex space-x-1 items-center">
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                        </div>
+                      )}
+                      {/* Smooth cursor indicator */}
+                      <span className="inline-block w-0.5 h-4 bg-primary/70 animate-pulse ml-1 mt-0.5"></span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-muted-foreground">
