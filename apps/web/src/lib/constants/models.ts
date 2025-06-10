@@ -13,6 +13,10 @@ export interface ModelInfo {
   };
   supportsFunctions: boolean;
   supportsVision: boolean;
+  supportsWebSearch: boolean;
+  supportsFileUpload: boolean;
+  supportsReasoning: boolean;
+  icon?: string;
 }
 
 export const AVAILABLE_MODELS: ModelInfo[] = [
@@ -30,6 +34,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: false,
+    supportsFileUpload: true,
+    supportsReasoning: false,
+    icon: '🔥',
   },
   {
     id: 'gpt-4o',
@@ -44,6 +52,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: false,
+    supportsFileUpload: true,
+    supportsReasoning: false,
+    icon: '⚡',
   },
   
   // Anthropic Models
@@ -60,6 +72,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: false,
+    supportsFileUpload: true,
+    supportsReasoning: false,
+    icon: '🎯',
   },
   {
     id: 'claude-3-5-sonnet-20241022',
@@ -74,6 +90,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: false,
+    supportsFileUpload: true,
+    supportsReasoning: true,
+    icon: '🎭',
   },
   
   // Google Models
@@ -90,6 +110,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: true,
+    supportsFileUpload: true,
+    supportsReasoning: false,
+    icon: '✨',
   },
   {
     id: 'gemini-1.5-pro',
@@ -104,6 +128,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
+    supportsWebSearch: true,
+    supportsFileUpload: true,
+    supportsReasoning: true,
+    icon: '🚀',
   },
   
   // DeepSeek Models
@@ -120,6 +148,10 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: false,
     supportsVision: false,
+    supportsWebSearch: false,
+    supportsFileUpload: false,
+    supportsReasoning: true,
+    icon: '🧠',
   },
 ];
 

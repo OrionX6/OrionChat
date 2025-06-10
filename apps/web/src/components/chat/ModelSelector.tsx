@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Zap, Eye, Wrench } from "lucide-react";
+import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe, Upload, Diamond } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   AVAILABLE_MODELS, 
   MODELS_BY_PROVIDER, 
@@ -37,38 +43,72 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
     setOpen(false);
   };
 
+  const getCapabilityIcon = (type: string) => {
+    switch (type) {
+      case 'vision': return <Eye className="h-4 w-4" />;
+      case 'websearch': return <Globe className="h-4 w-4" />;
+      case 'upload': return <FileText className="h-4 w-4" />;
+      case 'reasoning': return <Brain className="h-4 w-4" />;
+      case 'functions': return <Wrench className="h-4 w-4" />;
+      case 'premium': return <Diamond className="h-4 w-4" />;
+      default: return null;
+    }
+  };
+
+  const getCapabilityTooltip = (type: string) => {
+    switch (type) {
+      case 'vision': return 'Image upload and analysis';
+      case 'websearch': return 'Web search capabilities';
+      case 'upload': return 'File and document upload';
+      case 'reasoning': return 'Advanced reasoning and problem solving';
+      case 'functions': return 'Function calling and tools';
+      case 'premium': return 'Premium model features';
+      default: return '';
+    }
+  };
+
   const renderModelItem = (model: ModelInfo) => {
     const isSelected = model.id === selectedModel;
+    const capabilities = [];
+    
+    if (model.supportsVision) capabilities.push('vision');
+    if (model.supportsWebSearch) capabilities.push('websearch');
+    if (model.supportsFileUpload) capabilities.push('upload');
+    if (model.supportsReasoning) capabilities.push('reasoning');
+    if (model.provider === 'anthropic' || model.provider === 'openai') capabilities.push('premium');
     
     return (
       <DropdownMenuItem
         key={model.id}
         onClick={() => handleModelSelect(model)}
-        className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 border-l-2 border-l-transparent hover:border-l-primary/50"
       >
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{model.displayName}</span>
-            {isSelected && <Check className="h-4 w-4 text-primary" />}
-          </div>
-          <div className="flex items-center gap-1">
-            {model.supportsFunctions && (
-              <Badge variant="secondary" className="text-xs">
-                <Wrench className="h-3 w-3 mr-1" />
-                Functions
-              </Badge>
-            )}
-            {model.supportsVision && (
-              <Badge variant="secondary" className="text-xs">
-                <Eye className="h-3 w-3 mr-1" />
-                Vision
-              </Badge>
+        <div className="flex items-center gap-3">
+          <span className="text-lg">{model.icon}</span>
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">{model.displayName}</span>
+            {model.provider === 'deepseek' && (
+              <span className="text-xs text-muted-foreground">DeepSeek</span>
             )}
           </div>
+          {isSelected && <Check className="h-4 w-4 text-primary ml-2" />}
         </div>
-        <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-          <span>{model.description}</span>
-          <span className="font-mono">{formatCostDisplay(model)}</span>
+        
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            {capabilities.map((capability) => (
+              <Tooltip key={capability}>
+                <TooltipTrigger asChild>
+                  <div className="p-1.5 rounded bg-muted/50 hover:bg-muted cursor-help">
+                    {getCapabilityIcon(capability)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{getCapabilityTooltip(capability)}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
         </div>
       </DropdownMenuItem>
     );
@@ -97,42 +137,48 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-[400px] max-h-[500px] overflow-y-auto">
-        <DropdownMenuLabel className="flex items-center gap-2">
-          <Zap className="h-4 w-4" />
-          Choose Model
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="start" className="w-[450px] max-h-[600px] overflow-y-auto bg-background border border-border">
+        <div className="p-3 border-b">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search models..."
+              className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+        </div>
         
-        {/* OpenAI Models */}
-        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          OpenAI
-        </DropdownMenuLabel>
-        {MODELS_BY_PROVIDER.openai.map(renderModelItem)}
+        <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">Unlock all models + higher limits</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-2xl font-bold text-pink-500">$8</span>
+                <span className="text-muted-foreground">/month</span>
+              </div>
+            </div>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6">
+              Upgrade now
+            </Button>
+          </div>
+        </div>
         
-        <DropdownMenuSeparator />
+        <div className="py-2">
+          {AVAILABLE_MODELS.map(renderModelItem)}
+        </div>
         
-        {/* Anthropic Models */}
-        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Anthropic
-        </DropdownMenuLabel>
-        {MODELS_BY_PROVIDER.anthropic.map(renderModelItem)}
-        
-        <DropdownMenuSeparator />
-        
-        {/* Google Models */}
-        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          Google
-        </DropdownMenuLabel>
-        {MODELS_BY_PROVIDER.google.map(renderModelItem)}
-        
-        <DropdownMenuSeparator />
-        
-        {/* DeepSeek Models */}
-        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          DeepSeek
-        </DropdownMenuLabel>
-        {MODELS_BY_PROVIDER.deepseek.map(renderModelItem)}
+        <div className="p-3 border-t flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <ChevronDown className="h-4 w-4 rotate-180" />
+            <span>Show all</span>
+          </div>
+          <div className="p-1 rounded hover:bg-muted cursor-pointer">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+            </svg>
+          </div>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

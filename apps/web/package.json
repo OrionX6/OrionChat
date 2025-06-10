@@ -12,6 +12,7 @@
     "@orion-chat/llm-adapters": "^0.1.0",
     "@orion-chat/shared-types": "^0.1.0",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.50.0",
     "class-variance-authority": "^0.7.1",
