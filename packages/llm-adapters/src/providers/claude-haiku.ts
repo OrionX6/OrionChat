@@ -40,12 +40,7 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
         } else if (chunk.type === 'message_stop') {
           yield {
             content: '',
-            done: true,
-            usage: chunk.usage ? {
-              prompt_tokens: chunk.usage.input_tokens,
-              completion_tokens: chunk.usage.output_tokens,
-              total_tokens: chunk.usage.input_tokens + chunk.usage.output_tokens
-            } : undefined
+            done: true
           };
         }
       }

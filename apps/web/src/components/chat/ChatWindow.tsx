@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { Sidebar } from "./Sidebar";
@@ -19,8 +19,12 @@ export function ChatWindow() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(false);
   const [conversationsLoading, setConversationsLoading] = useState(true);
+  const [streamingMessage, setStreamingMessage] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Load conversations on mount
   useEffect(() => {
@@ -35,6 +39,17 @@ export function ChatWindow() {
       loadMessages(currentConversation.id);
     }
   }, [currentConversation]);
+
+  // Auto-scroll to bottom when messages change or streaming updates
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streamingMessage]);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const loadConversations = async () => {
     if (!user) return;
@@ -77,7 +92,7 @@ export function ChatWindow() {
   };
 
   const createNewConversation = async () => {
-    if (!user) return;
+    if (!user) return null;
 
     const { data, error } = await supabase
       .from('conversations')
@@ -92,12 +107,13 @@ export function ChatWindow() {
 
     if (error) {
       console.error('Error creating conversation:', error);
-      return;
+      return null;
     }
 
     setConversations([data, ...conversations]);
     setCurrentConversation(data);
     setMessages([]);
+    return data;
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
@@ -171,62 +187,176 @@ export function ChatWindow() {
     ));
   };
 
+  const updateConversationMetadata = async (conversationId: string) => {
+    // Update conversation metadata without reloading messages
+    const { data, error } = await supabase
+      .from('conversations')
+      .update({
+        updated_at: new Date().toISOString(),
+        last_message_at: new Date().toISOString(),
+      })
+      .eq('id', conversationId)
+      .select()
+      .single();
+
+    if (!error && data) {
+      setConversations(conversations.map(c =>
+        c.id === conversationId ? data : c
+      ));
+      if (currentConversation?.id === conversationId) {
+        setCurrentConversation(data);
+      }
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!user) return;
 
     // Create new conversation if none exists
-    if (!currentConversation) {
-      await createNewConversation();
-      return;
+    let conversation = currentConversation;
+    if (!conversation) {
+      conversation = await createNewConversation();
+      if (!conversation) {
+        console.error('Failed to create conversation');
+        return;
+      }
+      // Wait a moment for state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     setLoading(true);
+    setIsStreaming(false);
+    setStreamingMessage('');
 
-    // Add user message
-    const { data: userMessage, error: userError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: currentConversation.id,
-        user_id: user.id,
-        role: 'user',
-        content,
-        provider: currentConversation.model_provider,
-        model: currentConversation.model_name
-      })
-      .select()
-      .single();
-
-    if (userError) {
-      console.error('Error saving user message:', userError);
-      setLoading(false);
-      return;
-    }
-
-    setMessages(prev => [...prev, userMessage]);
-
-    // Simulate AI response (replace with actual AI call later)
-    setTimeout(async () => {
-      const { data: aiMessage, error: aiError } = await supabase
+    try {
+      // Add user message to database
+      const { data: userMessage, error: userError } = await supabase
         .from('messages')
         .insert({
-          conversation_id: currentConversation.id,
+          conversation_id: conversation.id,
           user_id: user.id,
-          role: 'assistant',
-          content: `I received your message: "${content}". This is a demo response from OrionChat using ${currentConversation.model_name}!`,
-          provider: currentConversation.model_provider,
-          model: currentConversation.model_name
+          role: 'user',
+          content,
+          provider: conversation.model_provider,
+          model: conversation.model_name
         })
         .select()
         .single();
 
-      if (aiError) {
-        console.error('Error saving AI message:', aiError);
-      } else {
-        setMessages(prev => [...prev, aiMessage]);
+      if (userError) {
+        console.error('Error saving user message:', userError);
+        setLoading(false);
+        return;
       }
 
+      // Add user message to UI immediately
+      setMessages(prev => [...prev, userMessage]);
+
+      // Prepare messages for AI (include the new user message)
+      const conversationMessages = [...messages, userMessage].map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Start streaming
+      setIsStreaming(true);
+
+      // Stream response from AI
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: conversationMessages,
+          conversationId: conversation.id,
+          provider: conversation.model_provider,
+          model: conversation.model_name
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let accumulatedContent = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+
+                if (data.content) {
+                  accumulatedContent += data.content;
+                  setStreamingMessage(accumulatedContent);
+                }
+
+                if (data.done) {
+                  // Streaming is complete, create final message and add to messages
+                  setIsStreaming(false);
+
+                  // Create the final assistant message
+                  const finalMessage: Message = {
+                    id: data.messageId || 'final-' + Date.now(),
+                    conversation_id: conversation.id,
+                    user_id: user.id,
+                    role: 'assistant',
+                    content: accumulatedContent,
+                    provider: conversation.model_provider,
+                    model: conversation.model_name,
+                    tokens_used: 0,
+                    cost_usd: null,
+                    response_time_ms: null,
+                    finish_reason: 'stop',
+                    tool_calls: null,
+                    attachments: null,
+                    embedding: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
+
+                  // Add the final message to the messages array
+                  setMessages(prev => [...prev, finalMessage]);
+                  setStreamingMessage('');
+
+                  // Update conversation metadata without reloading messages
+                  await updateConversationMetadata(conversation.id);
+                  break;
+                }
+              } catch (parseError) {
+                console.error('Error parsing chunk:', parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setIsStreaming(false);
+      setStreamingMessage('');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -259,11 +389,45 @@ export function ChatWindow() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}
-              {loading && (
+
+              {/* Streaming Message */}
+              {isStreaming && streamingMessage && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                    <span className="text-xs">AI</span>
+                  </div>
+                  <div className="flex flex-col items-start max-w-[70%]">
+                    <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2">
+                      <p className="text-sm whitespace-pre-wrap">{streamingMessage}</p>
+                      {/* Typing indicator */}
+                      <span className="inline-block w-2 h-4 bg-muted-foreground/50 animate-pulse ml-1"></span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {currentConversation && (
+                        <span className="text-xs text-muted-foreground bg-muted/50 px-1 rounded">
+                          {currentConversation.model_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading Indicator */}
+              {loading && !isStreaming && (
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                     <span className="text-xs">AI</span>
@@ -277,6 +441,9 @@ export function ChatWindow() {
                   </div>
                 </div>
               )}
+
+              {/* Scroll anchor */}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
