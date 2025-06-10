@@ -51,7 +51,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   };
 
   return (
-    <div className="border-t border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-6">
+    <div className="bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-6 px-6">
       <div className="max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="relative">
           <div className="relative flex items-end gap-3 p-3 border border-border/30 rounded-2xl bg-background/50 hover:border-border/60 focus-within:border-primary/50 transition-colors">
@@ -90,8 +90,8 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
         </form>
 
         {/* Model selector and footer */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center mt-4">
+          <div className="flex items-center gap-4">
             {currentConversation && onModelChange && (
               <ModelSelector
                 selectedModel={currentConversation.model_name}
@@ -99,12 +99,12 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                 disabled={disabled}
               />
             )}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Make sure you agree to our{" "}
-            <button className="underline hover:no-underline">Terms</button>
-            {" "}and{" "}
-            <button className="underline hover:no-underline">Privacy Policy</button>
+            <div className="text-xs text-muted-foreground">
+              Make sure you agree to our{" "}
+              <button className="underline hover:no-underline">Terms</button>
+              {" "}and{" "}
+              <button className="underline hover:no-underline">Privacy Policy</button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,19 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3, ChevronLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/lib/types/database";
-import { getModelById } from "@/lib/constants/models";
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 
@@ -25,6 +17,8 @@ interface SidebarProps {
   onDeleteConversation: (conversationId: string) => void;
   onRenameConversation: (conversationId: string, newTitle: string) => void;
   loading?: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function Sidebar({
@@ -35,9 +29,12 @@ export function Sidebar({
   onDeleteConversation,
   onRenameConversation,
   loading = false,
+  isCollapsed = false,
+  onToggleCollapse,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [showActionsId, setShowActionsId] = useState<string | null>(null);
 
   const handleStartEdit = (conversation: Conversation) => {
     setEditingId(conversation.id);
@@ -57,6 +54,18 @@ export function Sidebar({
     setEditTitle("");
   };
 
+  // Close action buttons when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowActionsId(null);
+    };
+    
+    if (showActionsId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showActionsId]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSaveEdit();
@@ -65,24 +74,53 @@ export function Sidebar({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 24 * 7) {
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
+  if (isCollapsed) {
+    return (
+      <div className="w-12 bg-card/50 border-r border-border/50 flex flex-col h-full">
+        {/* Collapsed Header */}
+        <div className="p-3 border-b border-border/50">
+          <Button
+            onClick={onToggleCollapse}
+            variant="ghost"
+            size="sm"
+            className="w-full h-10 p-0"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Collapsed New Chat Button */}
+        <div className="p-3">
+          <Button
+            onClick={onNewConversation}
+            variant="ghost"
+            size="sm"
+            className="w-full h-10 p-0"
+            disabled={loading}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-80 bg-card/50 border-r border-border/50 flex flex-col h-full">
+    <div className="w-64 bg-card/50 border-r border-border/50 flex flex-col h-full">
       {/* Header */}
       <div className="p-6 border-b border-border/50">
+        <div className="flex items-center gap-2 mb-4">
+          <Button
+            onClick={onToggleCollapse}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">Conversations</span>
+        </div>
         <Button
           onClick={onNewConversation}
           className="w-full flex items-center gap-2 h-11 text-sm font-medium"
@@ -114,20 +152,24 @@ export function Sidebar({
             {conversations.map((conversation) => {
               const isSelected = currentConversation?.id === conversation.id;
               const isEditing = editingId === conversation.id;
-              const model = getModelById(conversation.model_name);
 
               return (
                 <div
                   key={conversation.id}
                   className={cn(
-                    "group relative rounded-xl p-4 cursor-pointer transition-all duration-200",
+                    "group relative rounded-lg p-3 cursor-pointer transition-all duration-200",
                     isSelected
-                      ? "bg-primary/10 border border-primary/20 shadow-sm"
-                      : "hover:bg-muted/30 hover:shadow-sm"
+                      ? "bg-primary/10 border border-primary/20"
+                      : "hover:bg-muted/30"
                   )}
-                  onClick={() => !isEditing && onConversationSelect(conversation)}
+                  onClick={() => {
+                    if (!isEditing) {
+                      setShowActionsId(null);
+                      onConversationSelect(conversation);
+                    }
+                  }}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1 w-full">
                     <div className="flex-1 min-w-0">
                       {isEditing ? (
                         <Input
@@ -135,67 +177,59 @@ export function Sidebar({
                           onChange={(e) => setEditTitle(e.target.value)}
                           onKeyDown={handleKeyDown}
                           onBlur={handleSaveEdit}
-                          className="h-6 text-sm"
+                          className="h-7 text-sm"
                           autoFocus
                         />
                       ) : (
-                        <h3 className="font-medium text-sm truncate">
+                        <h3 className="font-medium text-sm truncate py-1">
                           {conversation.title}
                         </h3>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(conversation.updated_at)}
-                        </span>
-                        {model && (
-                          <Badge variant="secondary" className="text-xs">
-                            {model.displayName}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {conversation.message_count && conversation.message_count > 0 && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {conversation.message_count} messages
-                        </div>
                       )}
                     </div>
 
                     {!isEditing && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        {showActionsId === conversation.id ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(conversation);
+                                setShowActionsId(null);
+                              }}
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteConversation(conversation.id);
+                                setShowActionsId(null);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowActionsId(conversation.id);
+                            }}
                           >
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-3 w-3" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              handleStartEdit(conversation);
-                            }}
-                          >
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation();
-                              onDeleteConversation(conversation.id);
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
