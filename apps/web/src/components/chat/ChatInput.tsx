@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Paperclip } from "lucide-react";
+import { Send, Paperclip, Search } from "lucide-react";
 import { ModelSelector } from "./ModelSelector";
 import type { Database } from "@/lib/types/database";
 import type { ModelProvider } from "@/lib/constants/models";
@@ -54,8 +54,20 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
     <div className="bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-6 px-6">
       <div className="max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="relative">
-          <div className="relative flex items-end gap-3 p-3 border border-border/30 rounded-2xl bg-background/50 hover:border-border/60 focus-within:border-primary/50 transition-colors">
-            {/* Attachment button */}
+          <div className="relative flex items-center gap-3 p-4 border border-border/40 rounded-3xl bg-card/80 backdrop-blur-sm focus-within:border-primary transition-colors duration-200 shadow-lg">
+            {/* Model selector */}
+            {currentConversation && onModelChange && (
+              <div className="flex-shrink-0">
+                <ModelSelector
+                  selectedModel={currentConversation.model_name}
+                  onModelChange={onModelChange}
+                  disabled={disabled}
+                  compact={true}
+                />
+              </div>
+            )}
+
+            {/* Search icon */}
             <Button
               type="button"
               variant="ghost"
@@ -63,9 +75,9 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
               disabled={disabled}
             >
-              <Paperclip className="h-4 w-4" />
+              <Search className="h-4 w-4" />
             </Button>
-            
+
             {/* Text input */}
             <Textarea
               value={message}
@@ -76,35 +88,37 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               rows={1}
               disabled={disabled}
             />
-            
+
+            {/* Attachment button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+              disabled={disabled}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+
             {/* Send button */}
             <Button
               type="submit"
               disabled={!message.trim() || disabled}
               size="sm"
-              className="h-8 w-8 p-0 flex-shrink-0 rounded-lg"
+              className="h-8 w-8 p-0 flex-shrink-0 rounded-lg bg-primary hover:bg-primary/90"
             >
               <Send className="h-4 w-4" />
             </Button>
           </div>
         </form>
 
-        {/* Model selector and footer */}
+        {/* Footer */}
         <div className="flex items-center justify-center mt-4">
-          <div className="flex items-center gap-4">
-            {currentConversation && onModelChange && (
-              <ModelSelector
-                selectedModel={currentConversation.model_name}
-                onModelChange={onModelChange}
-                disabled={disabled}
-              />
-            )}
-            <div className="text-xs text-muted-foreground">
-              Make sure you agree to our{" "}
-              <button className="underline hover:no-underline">Terms</button>
-              {" "}and{" "}
-              <button className="underline hover:no-underline">Privacy Policy</button>
-            </div>
+          <div className="text-xs text-muted-foreground">
+            Make sure you agree to our{" "}
+            <button className="underline hover:no-underline">Terms</button>
+            {" "}and{" "}
+            <button className="underline hover:no-underline">Privacy Policy</button>
           </div>
         </div>
       </div>

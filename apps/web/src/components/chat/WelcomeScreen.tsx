@@ -41,8 +41,7 @@ const samplePrompts = [
 
 export function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps) {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="text-center max-w-3xl w-full">
+    <div className="text-center max-w-3xl w-full p-8">
         {/* Main heading */}
         <div className="mb-12">
           <h1 className="text-5xl font-semibold mb-6 text-foreground tracking-tight">
@@ -82,7 +81,6 @@ export function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps) {
             </button>
           ))}
         </div>
-      </div>
     </div>
   );
 }

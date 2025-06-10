@@ -389,69 +389,76 @@ export function ChatWindow() {
       <div className="flex-1 flex flex-col relative">
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto p-6 pb-32"
+          className="flex-1 overflow-y-auto flex justify-center"
         >
-          {currentConversation ? (
-            messages.length === 0 && !isStreaming && !loading ? (
-              <WelcomeScreen onSuggestionClick={handleSendMessage} />
+          <div className="w-full max-w-4xl p-6 pb-32">
+            {currentConversation ? (
+              messages.length === 0 && !isStreaming && !loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {messages.map((message) => (
+                    <MessageBubble key={message.id} message={message} />
+                  ))}
+
+                  {isStreaming && (
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-medium">AI</span>
+                      </div>
+                      <div className="flex flex-col items-start max-w-[75%] min-w-0">
+                        <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start">
+                          {streamingMessage ? (
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{streamingMessage}</p>
+                          ) : (
+                            <div className="flex space-x-1 items-center">
+                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {loading && !isStreaming && (
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-medium">AI</span>
+                      </div>
+                      <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3">
+                        <div className="flex space-x-1">
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
+              )
             ) : (
-              <div className="max-w-4xl mx-auto space-y-6">
-                {messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
-                ))}
-
-                {isStreaming && (
-                  <div className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium">AI</span>
-                    </div>
-                    <div className="flex flex-col items-start max-w-[75%] min-w-0">
-                      <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start">
-                        {streamingMessage ? (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{streamingMessage}</p>
-                        ) : (
-                          <div className="flex space-x-1 items-center">
-                            <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
-                          </div>
-                        )}
-                        <span className="inline-block w-0.5 h-4 bg-primary/70 animate-pulse ml-1 mt-0.5"></span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {loading && !isStreaming && (
-                  <div className="flex gap-4">
-                    <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium">AI</span>
-                    </div>
-                    <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3">
-                      <div className="flex space-x-1">
-                        <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                        <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                        <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
+              <div className="flex items-center justify-center h-full">
+                <WelcomeScreen onSuggestionClick={handleSendMessage} />
               </div>
-            )
-          ) : (
-            <WelcomeScreen onSuggestionClick={handleSendMessage} />
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0">
-          <ChatInput
-            onSend={handleSendMessage}
-            disabled={loading}
-            currentConversation={currentConversation}
-            onModelChange={handleModelChange}
-          />
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center">
+          <div className="w-full max-w-4xl">
+            <ChatInput
+              onSend={handleSendMessage}
+              disabled={loading}
+              currentConversation={currentConversation}
+              onModelChange={handleModelChange}
+            />
+          </div>
         </div>
       </div>
     </div>

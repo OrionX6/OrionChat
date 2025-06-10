@@ -24,9 +24,10 @@ interface ModelSelectorProps {
   selectedModel: string;
   onModelChange: (provider: ModelProvider, modelName: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 }
 
-export function ModelSelector({ selectedModel, onModelChange, disabled = false }: ModelSelectorProps) {
+export function ModelSelector({ selectedModel, onModelChange, disabled = false, compact = false }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   
   const currentModel = AVAILABLE_MODELS.find(m => m.id === selectedModel);
@@ -77,18 +78,22 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false }
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           disabled={disabled}
-          className="flex items-center gap-2 min-w-[200px] justify-between"
+          className={`flex items-center gap-2 justify-between hover:bg-muted/50 ${
+            compact
+              ? "min-w-[140px] h-8 px-2 text-sm"
+              : "min-w-[200px]"
+          }`}
         >
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
+            {!compact && <Zap className="h-4 w-4" />}
             <span className="truncate">
-              {currentModel ? currentModel.displayName : 'Select Model'}
+              {currentModel ? (compact ? currentModel.displayName.split(' ')[0] + (currentModel.displayName.includes('Flash') ? ' Flash' : '') : currentModel.displayName) : 'Select Model'}
             </span>
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       

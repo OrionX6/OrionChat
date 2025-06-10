@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3, ChevronLeft, Menu } from "lucide-react";
+import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3, Menu, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { Database } from "@/lib/types/database";
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
@@ -35,6 +36,8 @@ export function Sidebar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [showActionsId, setShowActionsId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { user, signOut } = useAuth();
 
   const handleStartEdit = (conversation: Conversation) => {
     setEditingId(conversation.id);
@@ -53,6 +56,11 @@ export function Sidebar({
     setEditingId(null);
     setEditTitle("");
   };
+
+  // Filter conversations based on search query
+  const filteredConversations = conversations.filter(conversation =>
+    conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Close action buttons when clicking outside
   useEffect(() => {
@@ -107,49 +115,69 @@ export function Sidebar({
   }
 
   return (
-    <div className="w-64 bg-card/50 border-r border-border/50 flex flex-col h-full">
+    <div className="w-64 bg-card/80 border-r border-border/30 flex flex-col h-full">
       {/* Header */}
-      <div className="p-6 border-b border-border/50">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="p-4">
+        <div className="flex items-center gap-3 mb-6">
           <Button
             onClick={onToggleCollapse}
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <Menu className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium">Conversations</span>
+          <span className="text-lg font-semibold">OrionChat</span>
         </div>
+
+        {/* New Chat Button */}
         <Button
           onClick={onNewConversation}
-          className="w-full flex items-center gap-2 h-11 text-sm font-medium"
+          className="w-full flex items-center justify-center gap-2 h-10 text-sm font-medium bg-primary/90 hover:bg-primary text-primary-foreground rounded-lg mb-4"
           disabled={loading}
         >
-          <Plus className="h-4 w-4" />
           New Chat
         </Button>
+
+        {/* Search Input */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search your threads..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-muted/30 border-border/30 focus:border-border/60 h-9 text-sm"
+          />
+        </div>
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4">
+        {/* Section Header */}
+        {filteredConversations.length > 0 && (
+          <div className="mb-3">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Yesterday
+            </h3>
+          </div>
+        )}
+
         {loading ? (
-          <div className="p-4 space-y-3">
+          <div className="space-y-2">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-16 bg-muted rounded-lg"></div>
+                <div className="h-12 bg-muted/30 rounded-lg"></div>
               </div>
             ))}
           </div>
-        ) : conversations.length === 0 ? (
-          <div className="p-6 text-center text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p className="text-sm font-medium mb-1">No conversations yet</p>
-            <p className="text-xs">Start a new chat to get started</p>
+        ) : filteredConversations.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <MessageSquare className="h-8 w-8 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No conversations found</p>
           </div>
         ) : (
-          <div className="p-3 space-y-2">
-            {conversations.map((conversation) => {
+          <div className="space-y-1">
+            {filteredConversations.map((conversation) => {
               const isSelected = currentConversation?.id === conversation.id;
               const isEditing = editingId === conversation.id;
 
@@ -157,10 +185,10 @@ export function Sidebar({
                 <div
                   key={conversation.id}
                   className={cn(
-                    "group relative rounded-lg p-3 cursor-pointer transition-all duration-200",
+                    "group relative rounded-lg px-3 py-2 cursor-pointer transition-all duration-200",
                     isSelected
-                      ? "bg-primary/10 border border-primary/20"
-                      : "hover:bg-muted/30"
+                      ? "bg-primary/15 text-foreground"
+                      : "hover:bg-muted/40 text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => {
                     if (!isEditing) {
@@ -181,7 +209,7 @@ export function Sidebar({
                           autoFocus
                         />
                       ) : (
-                        <h3 className="font-medium text-sm truncate py-1">
+                        <h3 className="text-sm truncate py-1">
                           {conversation.title}
                         </h3>
                       )}
@@ -236,6 +264,40 @@ export function Sidebar({
               );
             })}
           </div>
+        )}
+      </div>
+
+      {/* Login/Account Section */}
+      <div className="p-4 border-t border-border/30">
+        {user ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs font-medium">
+                  {user.email?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <span className="text-sm text-muted-foreground truncate">
+                {user.email}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Login
+          </Button>
         )}
       </div>
     </div>

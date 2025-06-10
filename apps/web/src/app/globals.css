@@ -10,8 +10,8 @@
   --popover-foreground: #0f0f0f;
   --card: #ffffff;
   --card-foreground: #0f0f0f;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
+  --border: #d4d4d8;
+  --input: #d4d4d8;
   --primary: #171717;
   --primary-foreground: #fafafa;
   --secondary: #f4f4f5;
@@ -59,8 +59,8 @@
     --popover-foreground: #fafafa;
     --card: #0a0a0a;
     --card-foreground: #fafafa;
-    --border: #27272a;
-    --input: #27272a;
+    --border: #3f3f46;
+    --input: #3f3f46;
     --primary: #fafafa;
     --primary-foreground: #0a0a0a;
     --secondary: #171717;
@@ -78,4 +78,50 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Hide Next.js development mode indicators */
+[data-nextjs-toast-errors-parent],
+[data-nextjs-toast-errors],
+.__next-dev-overlay-backdrop,
+.__next-dev-overlay,
+[data-nextjs-scroll-focus-boundary],
+[data-nextjs-preloader],
+[data-nextjs-preloader-backdrop] {
+  display: none !important;
+}
+
+/* Hide any fixed positioned development elements including Next.js button */
+div[style*="position: fixed"][style*="bottom"][style*="left"],
+div[style*="position:fixed"][style*="bottom"][style*="left"],
+[style*="position: fixed; bottom: 16px; left: 16px"],
+[style*="position:fixed;bottom:16px;left:16px"],
+button[style*="position: fixed"][style*="bottom"][style*="left"] {
+  display: none !important;
+}
+
+/* Target specific Next.js development elements */
+#__next-build-watcher,
+.__next-dev-overlay-backdrop,
+.__next-dev-overlay,
+[data-nextjs-dialog-overlay],
+[data-nextjs-dialog-backdrop],
+[data-nextjs-build-indicator],
+[data-nextjs-build-indicator-backdrop] {
+  display: none !important;
+}
+
+/* Hide any element with Next.js in the text content */
+div:has-text("Next.js"),
+button:has-text("Next.js"),
+a:has-text("Next.js") {
+  display: none !important;
+}
+
+/* More aggressive hiding of bottom-left fixed elements */
+body > div[style*="position: fixed"][style*="bottom"][style*="left"],
+body > div[style*="position:fixed"][style*="bottom"][style*="left"],
+#__next > div[style*="position: fixed"][style*="bottom"][style*="left"],
+#__next > div[style*="position:fixed"][style*="bottom"][style*="left"] {
+  display: none !important;
 }
