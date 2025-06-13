@@ -394,7 +394,7 @@ export function ChatWindow() {
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto flex justify-center"
         >
-          <div className="w-full max-w-4xl p-6 pb-60">
+          <div className="w-full max-w-4xl p-6">
             {currentConversation ? (
               messages.length === 0 && !isStreaming && !loading ? (
                 <div className="flex items-center justify-center h-full">
@@ -436,6 +436,8 @@ export function ChatWindow() {
                     </div>
                   )}
 
+                  {/* Spacer to ensure messages are visible above input area */}
+                  <div className="h-32" />
                   <div ref={messagesEndRef} />
                 </div>
               )

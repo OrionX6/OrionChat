@@ -56,11 +56,12 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
       <div className="absolute inset-0 pointer-events-none">
         <div className="px-6 h-full">
           <div className="max-w-4xl mx-auto h-full relative">
-            {/* Blur area that extends full height */}
-            <div className="absolute inset-0 backdrop-blur-lg bg-background/20 rounded-3xl" 
+            {/* Blur area that extends full height with square bottom */}
+            <div className="absolute inset-0 backdrop-blur-lg bg-background/20" 
                  style={{
                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)',
-                   WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)'
+                   WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)',
+                   borderRadius: '1.5rem 1.5rem 0 0'
                  }}>
             </div>
           </div>
