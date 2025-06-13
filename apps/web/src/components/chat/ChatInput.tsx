@@ -51,74 +51,91 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   };
 
   return (
-    <div className="bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-6 px-6">
-      <div className="max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="relative">
-          <div className="relative flex items-center gap-3 p-4 border border-border/40 rounded-3xl bg-card/80 backdrop-blur-sm focus-within:border-primary transition-colors duration-200 shadow-lg">
-            {/* Model selector */}
-            {currentConversation && onModelChange && (
-              <div className="flex-shrink-0">
-                <ModelSelector
-                  selectedModel={currentConversation.model_name}
-                  onModelChange={onModelChange}
-                  disabled={disabled}
-                  compact={true}
-                />
-              </div>
-            )}
-
-            {/* Search icon */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
-              disabled={disabled}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-
-            {/* Text input */}
-            <Textarea
-              value={message}
-              onChange={handleMessageChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Type your message here..."
-              className="flex-1 min-h-[24px] max-h-[200px] resize-none border-0 p-0 text-base bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
-              rows={1}
-              disabled={disabled}
-            />
-
-            {/* Attachment button */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
-              disabled={disabled}
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-
-            {/* Send button */}
-            <Button
-              type="submit"
-              disabled={!message.trim() || disabled}
-              size="sm"
-              className="h-8 w-8 p-0 flex-shrink-0 rounded-lg bg-primary hover:bg-primary/90"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+    <div className="relative">
+      {/* Backdrop blur overlay extending to full height */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="px-6 h-full">
+          <div className="max-w-4xl mx-auto h-full relative">
+            {/* Blur area that extends full height */}
+            <div className="absolute inset-0 backdrop-blur-lg bg-background/20 rounded-3xl" 
+                 style={{
+                   maskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)',
+                   WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)'
+                 }}>
+            </div>
           </div>
-        </form>
+        </div>
+      </div>
+      
+      <div className="relative z-10 pb-6 px-6">
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="relative">
+            <div className="relative flex items-center gap-3 p-4 border border-border/20 rounded-3xl bg-card/20 backdrop-blur-xl focus-within:border-primary transition-colors duration-200 shadow-lg">
+              {/* Model selector */}
+              {currentConversation && onModelChange && (
+                <div className="flex-shrink-0">
+                  <ModelSelector
+                    selectedModel={currentConversation.model_name}
+                    onModelChange={onModelChange}
+                    disabled={disabled}
+                    compact={true}
+                  />
+                </div>
+              )}
 
-        {/* Footer */}
-        <div className="flex items-center justify-center mt-4">
-          <div className="text-xs text-muted-foreground">
-            Make sure you agree to our{" "}
-            <button className="underline hover:no-underline">Terms</button>
-            {" "}and{" "}
-            <button className="underline hover:no-underline">Privacy Policy</button>
+              {/* Search icon */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                disabled={disabled}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+
+              {/* Text input */}
+              <Textarea
+                value={message}
+                onChange={handleMessageChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message here..."
+                className="flex-1 min-h-[24px] max-h-[200px] resize-none border-0 p-0 text-base bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
+                rows={1}
+                disabled={disabled}
+              />
+
+              {/* Attachment button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                disabled={disabled}
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+
+              {/* Send button */}
+              <Button
+                type="submit"
+                disabled={!message.trim() || disabled}
+                size="sm"
+                className="h-8 w-8 p-0 flex-shrink-0 rounded-lg bg-primary hover:bg-primary/90"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="flex items-center justify-center mt-4">
+            <div className="text-xs text-muted-foreground">
+              Make sure you agree to our{" "}
+              <button className="underline hover:no-underline">Terms</button>
+              {" "}and{" "}
+              <button className="underline hover:no-underline">Privacy Policy</button>
+            </div>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { Sidebar } from "./Sidebar";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_MODEL, ModelProvider } from "@/lib/constants/models";
@@ -387,11 +388,13 @@ export function ChatWindow() {
       />
 
       <div className="flex-1 flex flex-col relative">
+        <Header />
+        
         <div
           ref={messagesContainerRef}
           className="flex-1 overflow-y-auto flex justify-center"
         >
-          <div className="w-full max-w-4xl p-6 pb-32">
+          <div className="w-full max-w-4xl p-6 pb-60">
             {currentConversation ? (
               messages.length === 0 && !isStreaming && !loading ? (
                 <div className="flex items-center justify-center h-full">
@@ -404,12 +407,9 @@ export function ChatWindow() {
                   ))}
 
                   {isStreaming && (
-                    <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-medium">AI</span>
-                      </div>
-                      <div className="flex flex-col items-start max-w-[75%] min-w-0">
-                        <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start">
+                    <div className="flex justify-start">
+                      <div className="flex flex-col items-start flex-1 min-w-0">
+                        <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start w-full">
                           {streamingMessage ? (
                             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{streamingMessage}</p>
                           ) : (
@@ -425,10 +425,7 @@ export function ChatWindow() {
                   )}
 
                   {loading && !isStreaming && (
-                    <div className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full bg-muted/50 text-muted-foreground border border-border/50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-medium">AI</span>
-                      </div>
+                    <div className="flex justify-start">
                       <div className="bg-muted/50 border border-border/50 rounded-2xl px-4 py-3">
                         <div className="flex space-x-1">
                           <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -450,14 +447,16 @@ export function ChatWindow() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 flex justify-center">
-          <div className="w-full max-w-4xl">
-            <ChatInput
-              onSend={handleSendMessage}
-              disabled={loading}
-              currentConversation={currentConversation}
-              onModelChange={handleModelChange}
-            />
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+          <div className="pointer-events-auto flex justify-center">
+            <div className="w-full max-w-4xl">
+              <ChatInput
+                onSend={handleSendMessage}
+                disabled={loading}
+                currentConversation={currentConversation}
+                onModelChange={handleModelChange}
+              />
+            </div>
           </div>
         </div>
       </div>
