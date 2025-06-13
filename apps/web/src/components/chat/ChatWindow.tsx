@@ -23,6 +23,7 @@ export function ChatWindow() {
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const { user } = useAuth();
   const supabase = createClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,6 +55,10 @@ export function ChatWindow() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, []);
+
+  const handleTypingChange = (typing: boolean) => {
+    setIsTyping(typing);
+  };
 
   const loadConversations = async () => {
     if (!user) return;
@@ -398,7 +403,9 @@ export function ChatWindow() {
             {currentConversation ? (
               messages.length === 0 && !isStreaming && !loading ? (
                 <div className="flex items-center justify-center h-full">
-                  <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                  <div className={`transition-opacity duration-300 ${isTyping ? 'opacity-0' : 'opacity-100'}`}>
+                    <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -443,7 +450,9 @@ export function ChatWindow() {
               )
             ) : (
               <div className="flex items-center justify-center h-full">
-                <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                <div className={`transition-opacity duration-300 ${isTyping ? 'opacity-0' : 'opacity-100'}`}>
+                  <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                </div>
               </div>
             )}
           </div>
@@ -455,6 +464,7 @@ export function ChatWindow() {
               <ChatInput
                 onSend={handleSendMessage}
                 disabled={loading}
+                onTypingChange={handleTypingChange}
                 currentConversation={currentConversation}
                 onModelChange={handleModelChange}
               />
