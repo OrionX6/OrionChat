@@ -404,7 +404,7 @@ export function ChatWindow() {
               messages.length === 0 && !isStreaming && !loading ? (
                 <div className="flex items-center justify-center h-full">
                   <div className={`transition-opacity duration-300 ${isTyping ? 'opacity-0' : 'opacity-100'}`}>
-                    <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                    <WelcomeScreen onSuggestionClick={handleSendMessage} conversationId={currentConversation?.id || null} />
                   </div>
                 </div>
               ) : (
@@ -451,7 +451,7 @@ export function ChatWindow() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className={`transition-opacity duration-300 ${isTyping ? 'opacity-0' : 'opacity-100'}`}>
-                  <WelcomeScreen onSuggestionClick={handleSendMessage} />
+                  <WelcomeScreen onSuggestionClick={handleSendMessage} conversationId={null} />
                 </div>
               </div>
             )}

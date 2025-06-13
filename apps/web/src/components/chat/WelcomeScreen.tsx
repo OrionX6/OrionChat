@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Code, Lightbulb, BookOpen } from "lucide-react";
 
@@ -8,6 +8,7 @@ interface WelcomeScreenProps {
   onSuggestionClick: (suggestion: string) => void;
   onNewConversation?: () => void;
   showNewChatButton?: boolean;
+  conversationId?: string | null;
 }
 
 const categories = [
@@ -66,8 +67,13 @@ const promptCollections = {
   ]
 };
 
-export function WelcomeScreen({ onSuggestionClick }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSuggestionClick, conversationId }: WelcomeScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<keyof typeof promptCollections>('general');
+  
+  // Reset to general category when conversation changes (new chat clicked)
+  useEffect(() => {
+    setSelectedCategory('general');
+  }, [conversationId]);
   
   const getCurrentPrompts = () => {
     return promptCollections[selectedCategory];
