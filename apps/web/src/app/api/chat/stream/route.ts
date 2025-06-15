@@ -1,7 +1,110 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { LLMRouter } from '@orion-chat/llm-adapters';
-import type { ChatMessage } from '@orion-chat/shared-types/src/llm';
+import type { ChatMessage, MultimodalContent } from '@orion-chat/shared-types/src/llm';
+
+interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  preview_url?: string;
+}
+
+interface AttachmentContent {
+  type: 'text' | 'image_url' | 'image_base64' | 'pdf';
+  text?: string;
+  image_url?: {
+    url: string;
+    detail?: 'low' | 'high' | 'auto';
+  };
+  image_base64?: {
+    data: string;
+    mimeType: string;
+  };
+  pdf_content?: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function processAttachments(attachments: FileAttachment[], supabase: any, provider: string): Promise<AttachmentContent[]> {
+  const processedContent: AttachmentContent[] = [];
+
+  for (const attachment of attachments) {
+    try {
+      if (attachment.type.startsWith('image/')) {
+        // For images, handle differently based on provider
+        if (attachment.preview_url) {
+          if (provider === 'google') {
+            // Gemini requires base64 data, so download and convert the image
+            try {
+              console.log('Downloading image for Gemini:', attachment.preview_url);
+              const response = await fetch(attachment.preview_url);
+              if (!response.ok) {
+                throw new Error(`Failed to download image: ${response.statusText}`);
+              }
+
+              const arrayBuffer = await response.arrayBuffer();
+              const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+              processedContent.push({
+                type: 'image_base64',
+                image_base64: {
+                  data: base64,
+                  mimeType: attachment.type
+                }
+              });
+              console.log('Successfully converted image to base64 for Gemini');
+            } catch (error) {
+              console.error('Failed to download/convert image for Gemini:', error);
+              // Fallback: skip this image
+            }
+          } else {
+            // OpenAI and others can use URLs directly
+            processedContent.push({
+              type: 'image_url',
+              image_url: {
+                url: attachment.preview_url,
+                detail: 'auto'
+              }
+            });
+          }
+        }
+      } else if (attachment.type === 'application/pdf') {
+        // For PDFs, retrieve extracted text from database
+        console.log('📄 Retrieving PDF text for attachment:', attachment.id);
+        const { data: fileData, error: fileError } = await supabase
+          .from('files')
+          .select('extracted_text, processing_status, original_name')
+          .eq('id', attachment.id)
+          .single();
+
+        if (fileError) {
+          console.error('❌ Error retrieving PDF data:', fileError);
+        } else {
+          console.log('📄 PDF data retrieved:', {
+            name: fileData.original_name,
+            processing_status: fileData.processing_status,
+            text_length: fileData.extracted_text?.length || 0,
+            text_preview: fileData.extracted_text?.substring(0, 100) + '...'
+          });
+        }
+
+        if (fileData?.extracted_text) {
+          processedContent.push({
+            type: 'pdf',
+            pdf_content: fileData.extracted_text
+          });
+        } else {
+          console.warn('⚠️ No extracted text found for PDF:', attachment.id);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing attachment ${attachment.id}:`, error);
+    }
+  }
+
+  return processedContent;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +117,7 @@ export async function POST(request: NextRequest) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { messages, conversationId, provider, model } = await request.json();
+    const { messages, conversationId, provider, model, attachments } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response('Messages are required', { status: 400 });
@@ -44,12 +147,96 @@ export async function POST(request: NextRequest) {
       deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     });
 
+    // Process attachments for the latest user message if they exist
+    let processedAttachments: AttachmentContent[] = [];
+    if (attachments && attachments.length > 0) {
+      processedAttachments = await processAttachments(attachments, supabase, provider);
+    }
+
     // Convert messages to the format expected by LLM providers
-    const chatMessages: ChatMessage[] = messages.map((msg: { role: 'user' | 'assistant' | 'system'; content: string; metadata?: Record<string, unknown> }) => ({
-      role: msg.role,
-      content: msg.content,
-      metadata: msg.metadata || {}
-    }));
+    const chatMessages: ChatMessage[] = messages.map((msg: { role: 'user' | 'assistant' | 'system'; content: string; metadata?: Record<string, unknown> }, index: number) => {
+      const baseMessage = {
+        role: msg.role,
+        content: msg.content,
+        metadata: msg.metadata || {}
+      };
+
+      // Add multimodal content to the last user message if attachments exist
+      if (msg.role === 'user' && index === messages.length - 1 && processedAttachments.length > 0) {
+        // Check if the provider supports multimodal content
+        const supportsMultimodal = provider === 'openai' || provider === 'google';
+        
+        if (supportsMultimodal) {
+          // For multimodal providers, format as structured content array
+          const multimodalContent: MultimodalContent[] = [
+            { type: 'text', text: msg.content },
+            ...processedAttachments.map((attachment): MultimodalContent => {
+              if (attachment.type === 'image_url') {
+                console.log('Adding image URL to multimodal content:', attachment.image_url?.url);
+                return {
+                  type: 'image',
+                  image: {
+                    url: attachment.image_url?.url,
+                    mimeType: 'image/jpeg' // Default, should be detected from file
+                  }
+                };
+              } else if (attachment.type === 'image_base64') {
+                console.log('Adding base64 image to multimodal content for Gemini');
+                return {
+                  type: 'image',
+                  image: {
+                    base64: attachment.image_base64?.data,
+                    mimeType: attachment.image_base64?.mimeType || 'image/jpeg'
+                  }
+                };
+              } else if (attachment.type === 'pdf') {
+                // For PDFs, include as text since most APIs don't support PDF directly
+                return {
+                  type: 'text',
+                  text: `\n\n[PDF Content]:\n${attachment.pdf_content}`
+                };
+              }
+              return { type: 'text', text: '' };
+            })
+          ];
+          
+          console.log('Sending multimodal content to', provider, ':', JSON.stringify(multimodalContent, null, 2));
+          
+          return {
+            ...baseMessage,
+            content: multimodalContent,
+            metadata: { 
+              ...baseMessage.metadata, 
+              hasAttachments: true,
+              attachmentTypes: processedAttachments.map(a => a.type)
+            }
+          };
+        } else {
+          // For text-only providers, append PDF content as text
+          let textContent = msg.content;
+          processedAttachments.forEach(attachment => {
+            if (attachment.type === 'pdf' && attachment.pdf_content) {
+              textContent += `\n\n[PDF Content from ${attachments.find((a: FileAttachment) => a.type === 'application/pdf')?.name}]:\n${attachment.pdf_content}`;
+            } else if (attachment.type === 'image_url' || attachment.type === 'image_base64') {
+              textContent += `\n\n[Image attached: ${attachments.find((a: FileAttachment) => a.type.startsWith('image/'))?.name}]`;
+            }
+          });
+          
+          return {
+            ...baseMessage,
+            content: textContent,
+            metadata: { 
+              ...baseMessage.metadata, 
+              hasAttachments: true,
+              attachmentTypes: processedAttachments.map(a => a.type),
+              textOnlyFallback: true
+            }
+          };
+        }
+      }
+
+      return baseMessage;
+    });
 
     // Create a readable stream for the response
     const encoder = new TextEncoder();

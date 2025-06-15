@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions } from '../types';
+import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions, MultimodalContent } from '../types';
 
 export class OpenAIMiniProvider implements CostOptimizedProvider {
   name = 'openai';
@@ -7,21 +7,50 @@ export class OpenAIMiniProvider implements CostOptimizedProvider {
   costPerToken = { input: 0.015, output: 0.06 }; // per 1k tokens in cents
   maxTokens = 128000;
   supportsFunctions = true;
+  supportsVision = true;
   
   private client: OpenAI;
   
   constructor(apiKey: string) {
     this.client = new OpenAI({ apiKey });
   }
+
+  private convertToOpenAIMessage(message: ChatMessage): any {
+    // Handle multimodal content
+    if (Array.isArray(message.content)) {
+      return {
+        role: message.role,
+        content: message.content.map(item => {
+          if (item.type === 'text') {
+            return { type: 'text', text: item.text };
+          } else if (item.type === 'image') {
+            const imageUrl = item.image?.url || 
+              (item.image?.base64 ? `data:${item.image.mimeType};base64,${item.image.base64}` : '');
+            return { 
+              type: 'image_url', 
+              image_url: { 
+                url: imageUrl,
+                detail: 'auto'
+              } 
+            };
+          }
+          return { type: 'text', text: '' };
+        })
+      };
+    }
+    
+    // Handle text content (backward compatibility)
+    return {
+      role: message.role,
+      content: message.content
+    };
+  }
   
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
     try {
       const stream = await this.client.chat.completions.create({
         model: options.model || 'gpt-4o-mini',
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
+        messages: messages.map(msg => this.convertToOpenAIMessage(msg)),
         stream: true,
         max_tokens: options.maxTokens || 16384, // GPT-4o-mini max output is 16,384 tokens
         temperature: options.temperature || 0.7,

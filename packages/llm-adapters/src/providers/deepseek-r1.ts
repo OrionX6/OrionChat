@@ -6,6 +6,7 @@ export class DeepSeekR1Provider implements CostOptimizedProvider {
   costPerToken = { input: 0.055, output: 0.219 }; // per 1k tokens in cents (updated pricing)
   maxTokens = 128000;
   supportsFunctions = true;
+  supportsVision = false; // DeepSeek R1 is text-only
   
   private apiKey: string;
   private baseUrl: string;
@@ -13,6 +14,23 @@ export class DeepSeekR1Provider implements CostOptimizedProvider {
   constructor(apiKey: string, baseUrl = 'https://api.deepseek.com') {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
+  }
+
+  private convertToTextContent(content: string | any[]): string {
+    // Since DeepSeek R1 is text-only, convert multimodal to text
+    if (Array.isArray(content)) {
+      return content
+        .map(item => {
+          if (item.type === 'text') {
+            return item.text || '';
+          } else if (item.type === 'image') {
+            return '[Image content - not supported by DeepSeek R1]';
+          }
+          return '';
+        })
+        .join('');
+    }
+    return content;
   }
   
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
@@ -27,7 +45,7 @@ export class DeepSeekR1Provider implements CostOptimizedProvider {
           model: options.model || 'deepseek-r1',
           messages: messages.map(msg => ({
             role: msg.role,
-            content: msg.content
+            content: this.convertToTextContent(msg.content)
           })),
           stream: true,
           max_tokens: options.maxTokens || 64000, // DeepSeek R1 max output is 64K tokens

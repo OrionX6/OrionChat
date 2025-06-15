@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingMessageBubble } from "./StreamingMessageBubble";
@@ -15,6 +15,14 @@ import type { Database } from "@/lib/types/database";
 type Message = Database['public']['Tables']['messages']['Row'];
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 
+interface FileAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  preview_url?: string;
+}
+
 export function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -25,10 +33,17 @@ export function ChatWindow() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [inputHeight, setInputHeight] = useState(128); // Default spacer height
+  const [selectedModel, setSelectedModel] = useState<{provider: ModelProvider, name: string}>({
+    provider: DEFAULT_MODEL.provider,
+    name: DEFAULT_MODEL.name
+  });
   const { user } = useAuth();
-  const supabase = createClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Create supabase client once
+  const supabase = useMemo(() => createClient(), []);
 
   // Load conversations on mount
   useEffect(() => {
@@ -110,8 +125,14 @@ export function ChatWindow() {
     return title.charAt(0).toUpperCase() + title.slice(1);
   };
 
-  const createNewConversation = async () => {
+  const createNewConversation = async (modelProvider?: ModelProvider, modelName?: string) => {
     if (!user) return null;
+
+    console.log('Creating new conversation with model:', modelProvider, modelName);
+
+    // Use provided model or fall back to selected model or default
+    const provider = modelProvider || selectedModel.provider;
+    const name = modelName || selectedModel.name;
 
     // Get model-specific max tokens
     const getModelMaxTokens = (provider: ModelProvider): number => {
@@ -129,26 +150,53 @@ export function ChatWindow() {
       }
     };
 
-    const { data, error } = await supabase
-      .from('conversations')
-      .insert({
-        user_id: user.id,
-        title: 'New Conversation',
-        model_provider: DEFAULT_MODEL.provider,
-        model_name: DEFAULT_MODEL.name,
-        max_tokens: getModelMaxTokens(DEFAULT_MODEL.provider) // Use model-specific limit
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: 'New Conversation',
+          model_provider: provider,
+          model_name: name,
+          max_tokens: getModelMaxTokens(provider) // Use model-specific limit
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error creating conversation:', error);
+        return null;
+      }
 
-    if (error) {
-      console.error('Error creating conversation:', error);
+
+      // Clean the data to avoid circular references and add missing properties
+      const cleanData: Conversation = {
+        id: data.id,
+        user_id: data.user_id,
+        title: data.title,
+        model_provider: data.model_provider,
+        model_name: data.model_name,
+        max_tokens: data.max_tokens || null,
+        temperature: data.temperature || null,
+        system_prompt: data.system_prompt || null,
+        is_document_chat: data.is_document_chat || null,
+        is_image_generation_enabled: data.is_image_generation_enabled || null,
+        is_web_search_enabled: data.is_web_search_enabled || null,
+        message_count: data.message_count || null,
+        total_tokens_used: data.total_tokens_used || null,
+        total_cost_usd: data.total_cost_usd || null,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        last_message_at: data.last_message_at || null
+      };
+
+      setConversations(prev => [cleanData, ...prev]);
+      setCurrentConversation(cleanData);
+      return cleanData;
+    } catch (err) {
+      console.error('Caught error in createNewConversation:', err);
       return null;
     }
-
-    setConversations(prev => [data, ...prev]);
-    setCurrentConversation(data);
-    return data;
   };
 
   const updateConversationTitle = async (conversationId: string, title: string) => {
@@ -160,11 +208,32 @@ export function ChatWindow() {
       .single();
 
     if (!error && data) {
+      // Clean the data to avoid circular references and add missing properties
+      const cleanData: Conversation = {
+        id: data.id,
+        user_id: data.user_id,
+        title: data.title,
+        model_provider: data.model_provider,
+        model_name: data.model_name,
+        max_tokens: data.max_tokens || null,
+        temperature: data.temperature || null,
+        system_prompt: data.system_prompt || null,
+        is_document_chat: data.is_document_chat || null,
+        is_image_generation_enabled: data.is_image_generation_enabled || null,
+        is_web_search_enabled: data.is_web_search_enabled || null,
+        message_count: data.message_count || null,
+        total_tokens_used: data.total_tokens_used || null,
+        total_cost_usd: data.total_cost_usd || null,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        last_message_at: data.last_message_at || null
+      };
+
       setConversations(prev => prev.map(c =>
-        c.id === conversationId ? data : c
+        c.id === conversationId ? cleanData : c
       ));
       if (currentConversation?.id === conversationId) {
-        setCurrentConversation(data);
+        setCurrentConversation(cleanData);
       }
     }
   };
@@ -209,17 +278,51 @@ export function ChatWindow() {
       return;
     }
 
+    // Clean the data to avoid circular references and add missing properties
+    const cleanData: Conversation = {
+      id: data.id,
+      user_id: data.user_id,
+      title: data.title,
+      model_provider: data.model_provider,
+      model_name: data.model_name,
+      max_tokens: data.max_tokens || null,
+      temperature: data.temperature || null,
+      system_prompt: data.system_prompt || null,
+      is_document_chat: data.is_document_chat || null,
+      is_image_generation_enabled: data.is_image_generation_enabled || null,
+      is_web_search_enabled: data.is_web_search_enabled || null,
+      message_count: data.message_count || null,
+      total_tokens_used: data.total_tokens_used || null,
+      total_cost_usd: data.total_cost_usd || null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      last_message_at: data.last_message_at || null
+    };
+
     setConversations(prev => prev.map(c =>
-      c.id === conversationId ? data : c
+      c.id === conversationId ? cleanData : c
     ));
 
     if (currentConversation?.id === conversationId) {
-      setCurrentConversation(data);
+      setCurrentConversation(cleanData);
     }
   };
 
+  const handleInputHeightChange = useCallback((height: number) => {
+    setInputHeight(Math.max(height, 128)); // Minimum 128px spacer
+  }, []);
+
+  // Wrapper function for Sidebar to avoid passing React events to createNewConversation
+  const handleNewConversation = useCallback(() => {
+    createNewConversation();
+  }, []);
+
   const handleModelChange = async (provider: ModelProvider, modelName: string) => {
-    if (!currentConversation) return;
+    // If no conversation exists, just update the selected model for future use
+    if (!currentConversation) {
+      setSelectedModel({ provider, name: modelName });
+      return;
+    }
 
     const { data, error } = await supabase
       .from('conversations')
@@ -236,19 +339,164 @@ export function ChatWindow() {
       return;
     }
 
-    setCurrentConversation(data);
+    // Clean the data to avoid circular references and add missing properties
+    const cleanData: Conversation = {
+      id: data.id,
+      user_id: data.user_id,
+      title: data.title,
+      model_provider: data.model_provider,
+      model_name: data.model_name,
+      max_tokens: data.max_tokens || null,
+      temperature: data.temperature || null,
+      system_prompt: data.system_prompt || null,
+      is_document_chat: data.is_document_chat || null,
+      is_image_generation_enabled: data.is_image_generation_enabled || null,
+      is_web_search_enabled: data.is_web_search_enabled || null,
+      message_count: data.message_count || null,
+      total_tokens_used: data.total_tokens_used || null,
+      total_cost_usd: data.total_cost_usd || null,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      last_message_at: data.last_message_at || null
+    };
+
+    setCurrentConversation(cleanData);
     setConversations(prev => prev.map(c =>
-      c.id === currentConversation.id ? data : c
+      c.id === currentConversation.id ? cleanData : c
     ));
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleRetryMessage = async (messageId: string) => {
+    if (!user || !currentConversation) return;
+
+    // Find the message to retry
+    const messageToRetry = messages.find(m => m.id === messageId);
+    if (!messageToRetry || messageToRetry.role !== 'assistant') return;
+
+    // Find the previous user message
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    const userMessage = messages[messageIndex - 1];
+    if (!userMessage || userMessage.role !== 'user') return;
+
+    // Remove the AI message and any messages after it, but keep the user message
+    const messagesUpToUser = messages.slice(0, messageIndex);
+    setMessages(messagesUpToUser);
+
+    // Generate new AI response using existing conversation context
+    setLoading(true);
+    
+    try {
+      const conversation = currentConversation;
+      
+      // Prepare messages for AI (including the existing user message)
+      const conversationMessages = messagesUpToUser.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Start streaming immediately
+      setIsStreaming(true);
+      setStreamingMessage('');
+
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: conversationMessages,
+          conversationId: conversation.id,
+          provider: conversation.model_provider,
+          model: conversation.model_name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No readable stream available');
+      }
+
+      let accumulatedContent = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+
+          const chunk = new TextDecoder().decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.content) {
+                  accumulatedContent += data.content;
+                  setStreamingMessage(accumulatedContent);
+                }
+
+                if (data.done) {
+                  // Generate client-side ID for immediate display
+                  const tempId = 'ai-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+                  
+                  const aiMessage: Message = {
+                    id: tempId,
+                    conversation_id: conversation.id,
+                    user_id: user.id,
+                    role: 'assistant',
+                    content: accumulatedContent,
+                    provider: conversation.model_provider,
+                    model: conversation.model_name,
+                    tokens_used: 0,
+                    cost_usd: null,
+                    response_time_ms: null,
+                    finish_reason: 'stop',
+                    tool_calls: null,
+                    attachments: null,
+                    embedding: null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
+
+                  // Add AI message and clear streaming
+                  setMessages(prev => [...prev, aiMessage]);
+                  setIsStreaming(false);
+                  setStreamingMessage('');
+                  
+                  return; // Exit the streaming loop
+                }
+              } catch (parseError) {
+                console.error('Error parsing chunk:', parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+    } catch (error) {
+      console.error('Error retrying message:', error);
+      setIsStreaming(false);
+      setStreamingMessage('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (content: string, attachments?: FileAttachment[]) => {
     if (!user) return;
 
-    // Create conversation if none exists
+    // Create conversation if none exists, using the selected model
     let conversation = currentConversation;
     if (!conversation) {
-      conversation = await createNewConversation();
+      conversation = await createNewConversation(selectedModel.provider, selectedModel.name);
       if (!conversation) return;
     }
 
@@ -264,7 +512,14 @@ export function ChatWindow() {
           role: 'user',
           content,
           provider: conversation.model_provider,
-          model: conversation.model_name
+          model: conversation.model_name,
+          attachments: attachments ? JSON.stringify(attachments.map(att => ({
+            id: att.id,
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            preview_url: att.preview_url
+          }))) : null
         })
         .select()
         .single();
@@ -305,7 +560,8 @@ export function ChatWindow() {
           messages: conversationMessages,
           conversationId: conversation.id,
           provider: conversation.model_provider,
-          model: conversation.model_name
+          model: conversation.model_name,
+          attachments: attachments || []
         }),
       });
 
@@ -402,7 +658,7 @@ export function ChatWindow() {
         conversations={conversations}
         currentConversation={currentConversation}
         onConversationSelect={setCurrentConversation}
-        onNewConversation={createNewConversation}
+        onNewConversation={handleNewConversation}
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         loading={conversationsLoading}
@@ -428,7 +684,11 @@ export function ChatWindow() {
               ) : (
                 <div className="space-y-6">
                   {messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} />
+                    <MessageBubble 
+                      key={message.id} 
+                      message={message}
+                      onRetry={message.role === 'assistant' ? () => handleRetryMessage(message.id) : undefined}
+                    />
                   ))}
 
                   {isStreaming && (
@@ -447,8 +707,8 @@ export function ChatWindow() {
                     </div>
                   )}
 
-                  {/* Spacer to ensure messages are visible above input area */}
-                  <div className="h-32" />
+                  {/* Dynamic spacer to ensure messages are visible above input area */}
+                  <div style={{ height: `${inputHeight + 24}px` }} />
                   <div ref={messagesEndRef} />
                 </div>
               )
@@ -471,6 +731,7 @@ export function ChatWindow() {
                 onTypingChange={handleTypingChange}
                 currentConversation={currentConversation}
                 onModelChange={handleModelChange}
+                onHeightChange={handleInputHeightChange}
               />
             </div>
           </div>

@@ -1,6 +1,16 @@
+export interface MultimodalContent {
+  type: 'text' | 'image';
+  text?: string;
+  image?: {
+    url?: string;
+    base64?: string;
+    mimeType?: string;
+  };
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | MultimodalContent[];
   metadata?: Record<string, any>;
 }
 
@@ -33,6 +43,7 @@ export interface CostOptimizedProvider {
   stream(messages: ChatMessage[], options: StreamOptions): AsyncIterable<StreamChunk>;
   embed(text: string): Promise<number[]>;
   supportsFunctions: boolean;
+  supportsVision: boolean;
 }
 
 export interface LLMProviderConfig {

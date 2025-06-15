@@ -53,9 +53,9 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       output: 0.40,
     },
     supportsFunctions: true,
-    supportsVision: true,
+    supportsVision: false, // Claude 3.5 Haiku is text-only, no vision support
     supportsWebSearch: false,
-    supportsFileUpload: true,
+    supportsFileUpload: true, // Supports text files and PDFs, but not images
     supportsReasoning: true,
     icon: '💙',
   },

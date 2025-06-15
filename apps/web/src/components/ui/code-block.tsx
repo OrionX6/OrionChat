@@ -25,7 +25,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
   };
 
   return (
-    <div className="relative group bg-muted/30 rounded-lg border border-border/50 w-full min-w-0">
+    <div className="relative group bg-muted/50 rounded-lg border border-border/50 w-full min-w-0">
       {language && (
         <div className="flex items-center px-4 py-2.5 border-b border-border/30 bg-accent">
           <span className="text-sm text-accent-foreground font-medium">{language}</span>

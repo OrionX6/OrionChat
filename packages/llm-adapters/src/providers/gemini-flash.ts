@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions } from '../types';
+import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions, MultimodalContent } from '../types';
 
 export class GeminiFlashProvider implements CostOptimizedProvider {
   name = 'google';
@@ -7,11 +7,32 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
   costPerToken = { input: 0.10, output: 0.40 }; // per 1k tokens in cents (updated for 2.0 pricing)
   maxTokens = 1000000;
   supportsFunctions = true;
+  supportsVision = true;
   
   private client: GoogleGenerativeAI;
   
   constructor(apiKey: string) {
     this.client = new GoogleGenerativeAI(apiKey);
+  }
+
+  private convertToGeminiParts(content: string | MultimodalContent[]): any[] {
+    if (Array.isArray(content)) {
+      return content.map(item => {
+        if (item.type === 'text' && item.text) {
+          return { text: item.text };
+        } else if (item.type === 'image' && item.image?.base64) {
+          return {
+            inlineData: {
+              mimeType: item.image.mimeType || 'image/jpeg',
+              data: item.image.base64
+            }
+          };
+        }
+        // Skip empty or unsupported content types
+        return null;
+      }).filter(part => part !== null); // Remove null entries
+    }
+    return [{ text: content }];
   }
   
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
@@ -55,13 +76,25 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
       // Convert messages to Gemini format
       const history = messages.slice(0, -1).map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
+        parts: this.convertToGeminiParts(msg.content)
       }));
       
       const lastMessage = messages[messages.length - 1];
-      
+      const lastMessageParts = this.convertToGeminiParts(lastMessage.content);
+
+      console.log('🔍 GEMINI DEBUG: Last message content:', JSON.stringify(lastMessage.content, null, 2));
+      console.log('🔍 GEMINI DEBUG: Converted parts:', JSON.stringify(lastMessageParts, null, 2));
+
+      // Check total content size
+      const totalContentSize = JSON.stringify(lastMessageParts).length;
+      console.log(`📏 GEMINI DEBUG: Total content size: ${totalContentSize} characters`);
+
+      if (totalContentSize > 1000000) { // 1MB limit check
+        console.warn(`⚠️ GEMINI WARNING: Content size (${totalContentSize}) is very large, this might cause API issues`);
+      }
+
       const chat = model.startChat({ history });
-      const result = await chat.sendMessageStream(lastMessage.content);
+      const result = await chat.sendMessageStream(lastMessageParts);
       
       let chunkCount = 0;
       let totalCharacters = 0;
