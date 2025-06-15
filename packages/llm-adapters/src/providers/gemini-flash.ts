@@ -27,6 +27,13 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
               data: item.image.base64
             }
           };
+        } else if (item.type === 'file_uri' && item.file_uri) {
+          return {
+            fileData: {
+              fileUri: item.file_uri,
+              mimeType: item.mime_type || 'application/pdf'
+            }
+          };
         }
         // Skip empty or unsupported content types
         return null;

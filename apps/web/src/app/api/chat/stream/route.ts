@@ -12,7 +12,7 @@ interface FileAttachment {
 }
 
 interface AttachmentContent {
-  type: 'text' | 'image_url' | 'image_base64' | 'pdf';
+  type: 'text' | 'image_url' | 'image_base64' | 'pdf' | 'file_uri';
   text?: string;
   image_url?: {
     url: string;
@@ -23,6 +23,8 @@ interface AttachmentContent {
     mimeType: string;
   };
   pdf_content?: string;
+  file_uri?: string;
+  mime_type?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,11 +72,11 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
           }
         }
       } else if (attachment.type === 'application/pdf') {
-        // For PDFs, retrieve extracted text from database
-        console.log('📄 Retrieving PDF text for attachment:', attachment.id);
+        // For PDFs, retrieve Gemini file URI from database
+        console.log('📄 Retrieving PDF data for attachment:', attachment.id);
         const { data: fileData, error: fileError } = await supabase
           .from('files')
-          .select('extracted_text, processing_status, original_name')
+          .select('gemini_file_uri, processing_status, original_name, extracted_text')
           .eq('id', attachment.id)
           .single();
 
@@ -84,18 +86,32 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
           console.log('📄 PDF data retrieved:', {
             name: fileData.original_name,
             processing_status: fileData.processing_status,
-            text_length: fileData.extracted_text?.length || 0,
-            text_preview: fileData.extracted_text?.substring(0, 100) + '...'
+            has_gemini_uri: !!fileData.gemini_file_uri,
+            gemini_uri: fileData.gemini_file_uri
           });
         }
 
-        if (fileData?.extracted_text) {
-          processedContent.push({
-            type: 'pdf',
-            pdf_content: fileData.extracted_text
-          });
+        if (fileData?.gemini_file_uri) {
+          // For Gemini, use the file URI directly
+          if (provider === 'google') {
+            processedContent.push({
+              type: 'file_uri',
+              file_uri: fileData.gemini_file_uri,
+              mime_type: 'application/pdf'
+            });
+          } else {
+            // For other providers, fall back to extracted text if available
+            if (fileData.extracted_text) {
+              processedContent.push({
+                type: 'pdf',
+                pdf_content: fileData.extracted_text
+              });
+            } else {
+              console.warn('⚠️ No extracted text available for non-Gemini provider');
+            }
+          }
         } else {
-          console.warn('⚠️ No extracted text found for PDF:', attachment.id);
+          console.warn('⚠️ No Gemini file URI found for PDF:', attachment.id);
         }
       }
     } catch (error) {
@@ -188,6 +204,14 @@ export async function POST(request: NextRequest) {
                     base64: attachment.image_base64?.data,
                     mimeType: attachment.image_base64?.mimeType || 'image/jpeg'
                   }
+                };
+              } else if (attachment.type === 'file_uri') {
+                // For Gemini file URIs, use the file reference directly
+                console.log('Adding file URI to multimodal content for Gemini:', attachment.file_uri);
+                return {
+                  type: 'file_uri',
+                  file_uri: attachment.file_uri,
+                  mime_type: attachment.mime_type
                 };
               } else if (attachment.type === 'pdf') {
                 // For PDFs, include as text since most APIs don't support PDF directly

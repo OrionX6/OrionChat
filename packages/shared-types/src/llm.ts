@@ -1,11 +1,13 @@
 export interface MultimodalContent {
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'file_uri';
   text?: string;
   image?: {
     url?: string;
     base64?: string;
     mimeType?: string;
   };
+  file_uri?: string;
+  mime_type?: string;
 }
 
 export interface ChatMessage {
