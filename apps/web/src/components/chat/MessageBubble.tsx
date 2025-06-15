@@ -20,10 +20,10 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`flex flex-col ${isUser ? "items-end max-w-[75%]" : "items-start flex-1"} min-w-0`}>
         <div
-          className={`rounded-2xl w-full min-w-0 ${
+          className={`w-full min-w-0 ${
             isUser
-              ? "bg-primary text-primary-foreground px-4 py-3"
-              : "bg-muted/50 text-foreground border border-border/50"
+              ? "bg-primary text-primary-foreground px-4 py-3 rounded-2xl"
+              : "text-foreground"
           }`}
         >
           {isUser ? (
@@ -31,13 +31,15 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
               {message.content}
             </p>
           ) : (
-            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
               <ReactMarkdown
+                remarkPlugins={[]}
+                rehypePlugins={[]}
                 components={{
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     return !inline && match ? (
-                      <div className="not-prose w-full -mx-4 -my-3 first:mt-0 last:mb-0">
+                      <div className="not-prose w-full max-w-none -my-3 first:mt-0 last:mb-0">
                         <CodeBlock
                           code={String(children).replace(/\n$/, '')}
                           language={match[1]}
@@ -50,16 +52,16 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
                     );
                   },
                   p({ children }: any) {
-                    return <p className="text-sm leading-relaxed">{children}</p>;
+                    return <p className="mb-3 last:mb-0 text-sm leading-relaxed">{children}</p>;
                   },
                   h1({ children }: any) {
-                    return <h1 className="text-lg font-semibold">{children}</h1>;
+                    return <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0">{children}</h1>;
                   },
                   h2({ children }: any) {
-                    return <h2 className="text-base font-semibold">{children}</h2>;
+                    return <h2 className="text-base font-semibold mt-4 mb-2 first:mt-0">{children}</h2>;
                   },
                   h3({ children }: any) {
-                    return <h3 className="text-sm font-semibold">{children}</h3>;
+                    return <h3 className="text-sm font-semibold mt-3 mb-1 first:mt-0">{children}</h3>;
                   },
                   ul({ children }: any) {
                     return <ul className="text-sm space-y-1 ml-4">{children}</ul>;
@@ -82,6 +84,9 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
                         {children}
                       </blockquote>
                     );
+                  },
+                  hr({ }: any) {
+                    return <hr className="border-border my-4" />;
                   },
                 }}
               >
