@@ -17,13 +17,13 @@ export class OpenAIMiniProvider implements CostOptimizedProvider {
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
     try {
       const stream = await this.client.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: options.model || 'gpt-4o-mini',
         messages: messages.map(msg => ({
           role: msg.role,
           content: msg.content
         })),
         stream: true,
-        max_tokens: Math.min(options.maxTokens || 4096, this.maxTokens),
+        max_tokens: options.maxTokens || 16384, // GPT-4o-mini max output is 16,384 tokens
         temperature: options.temperature || 0.7,
         ...(options.functions && { functions: options.functions })
       });

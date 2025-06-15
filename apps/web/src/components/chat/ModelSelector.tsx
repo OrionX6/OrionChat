@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe, Upload, Diamond } from "lucide-react";
+import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe, Diamond } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -20,10 +17,8 @@ import {
 } from "@/components/ui/tooltip";
 import { 
   AVAILABLE_MODELS, 
-  MODELS_BY_PROVIDER, 
   ModelInfo, 
-  ModelProvider,
-  formatCostDisplay 
+  ModelProvider
 } from "@/lib/constants/models";
 
 interface ModelSelectorProps {
@@ -130,7 +125,7 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
           <div className="flex items-center gap-2">
             {!compact && <Zap className="h-4 w-4" />}
             <span className="truncate">
-              {currentModel ? (compact ? currentModel.displayName.split(' ')[0] + (currentModel.displayName.includes('Flash') ? ' Flash' : '') : currentModel.displayName) : 'Select Model'}
+              {currentModel ? currentModel.displayName : 'Select Model'}
             </span>
           </div>
           <ChevronDown className="h-3 w-3 opacity-50" />

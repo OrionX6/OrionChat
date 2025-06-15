@@ -22,6 +22,7 @@ export interface StreamOptions {
   functions?: any[];
   userId?: string;
   conversationId?: string;
+  model?: string;
 }
 
 export interface CostOptimizedProvider {

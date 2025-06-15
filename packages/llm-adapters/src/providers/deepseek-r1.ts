@@ -3,9 +3,9 @@ import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions } from '
 export class DeepSeekR1Provider implements CostOptimizedProvider {
   name = 'deepseek';
   models = ['deepseek-r1'];
-  costPerToken = { input: 0.014, output: 0.28 }; // per 1k tokens in cents
-  maxTokens = 64000;
-  supportsFunctions = false;
+  costPerToken = { input: 0.055, output: 0.219 }; // per 1k tokens in cents (updated pricing)
+  maxTokens = 128000;
+  supportsFunctions = true;
   
   private apiKey: string;
   private baseUrl: string;
@@ -24,13 +24,13 @@ export class DeepSeekR1Provider implements CostOptimizedProvider {
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          model: 'deepseek-r1',
+          model: options.model || 'deepseek-r1',
           messages: messages.map(msg => ({
             role: msg.role,
             content: msg.content
           })),
           stream: true,
-          max_tokens: Math.min(options.maxTokens || 4096, this.maxTokens),
+          max_tokens: options.maxTokens || 64000, // DeepSeek R1 max output is 64K tokens
           temperature: options.temperature || 0.7
         })
       });

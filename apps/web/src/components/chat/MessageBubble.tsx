@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import ReactMarkdown from "react-markdown";
 import { CodeBlock } from "@/components/ui/code-block";
 import type { Database } from "@/lib/types/database";
 
@@ -10,43 +11,10 @@ interface MessageBubbleProps {
   message: Message;
 }
 
-function parseMessageContent(content: string) {
-  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
-  const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      const textContent = content.slice(lastIndex, match.index);
-      if (textContent.trim()) {
-        parts.push({ type: 'text', content: textContent });
-      }
-    }
-
-    // Add code block
-    const language = match[1] || undefined;
-    const code = match[2].trim();
-    parts.push({ type: 'code', content: code, language });
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Add remaining text
-  if (lastIndex < content.length) {
-    const textContent = content.slice(lastIndex);
-    if (textContent.trim()) {
-      parts.push({ type: 'text', content: textContent });
-    }
-  }
-
-  return parts.length > 0 ? parts : [{ type: 'text' as const, content }];
-}
+// Removed unused functions since we're now using ReactMarkdown
 
 export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const contentParts = parseMessageContent(message.content);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -54,25 +22,73 @@ export const MessageBubble = memo(function MessageBubble({ message }: MessageBub
         <div
           className={`rounded-2xl w-full min-w-0 ${
             isUser
-              ? "bg-primary text-primary-foreground"
+              ? "bg-primary text-primary-foreground px-4 py-3"
               : "bg-muted/50 text-foreground border border-border/50"
-          } ${contentParts.some(part => part.type === 'code') ? 'px-0 py-0' : 'px-4 py-3'}`}
+          }`}
         >
-          {contentParts.map((part, index) => {
-            if (part.type === 'code') {
-              return (
-                <div key={index} className={`w-full min-w-0 ${contentParts.length === 1 ? 'rounded-2xl overflow-hidden' : 'first:mt-3 last:mb-3'}`}>
-                  <CodeBlock code={part.content} language={part.language} />
-                </div>
-              );
-            } else {
-              return (
-                <p key={index} className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${contentParts.some(part => part.type === 'code') ? 'px-4 py-3' : ''}`}>
-                  {part.content}
-                </p>
-              );
-            }
-          })}
+          {isUser ? (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          ) : (
+            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+              <ReactMarkdown
+                components={{
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline && match ? (
+                      <div className="not-prose w-full -mx-4 -my-3 first:mt-0 last:mb-0">
+                        <CodeBlock
+                          code={String(children).replace(/\n$/, '')}
+                          language={match[1]}
+                        />
+                      </div>
+                    ) : (
+                      <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  p({ children }: any) {
+                    return <p className="text-sm leading-relaxed">{children}</p>;
+                  },
+                  h1({ children }: any) {
+                    return <h1 className="text-lg font-semibold">{children}</h1>;
+                  },
+                  h2({ children }: any) {
+                    return <h2 className="text-base font-semibold">{children}</h2>;
+                  },
+                  h3({ children }: any) {
+                    return <h3 className="text-sm font-semibold">{children}</h3>;
+                  },
+                  ul({ children }: any) {
+                    return <ul className="text-sm space-y-1 ml-4">{children}</ul>;
+                  },
+                  ol({ children }: any) {
+                    return <ol className="text-sm space-y-1 ml-4">{children}</ol>;
+                  },
+                  li({ children }: any) {
+                    return <li className="text-sm">{children}</li>;
+                  },
+                  strong({ children }: any) {
+                    return <strong className="font-semibold">{children}</strong>;
+                  },
+                  em({ children }: any) {
+                    return <em className="italic">{children}</em>;
+                  },
+                  blockquote({ children }: any) {
+                    return (
+                      <blockquote className="border-l-4 border-muted-foreground/20 pl-4 italic text-muted-foreground">
+                        {children}
+                      </blockquote>
+                    );
+                  },
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
         <div className={`flex items-center gap-2 mt-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
           <span className="text-xs text-muted-foreground">

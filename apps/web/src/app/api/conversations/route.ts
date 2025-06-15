@@ -44,6 +44,22 @@ export async function POST(request: Request) {
     
     const { title, model_provider, model_name } = await request.json()
     
+    // Get model-specific max tokens
+    const getModelMaxTokens = (provider: string): number => {
+      switch (provider) {
+        case 'openai':
+          return 16384; // GPT-4o-mini max output
+        case 'anthropic':
+          return 8192;  // Claude 3.5 Haiku max output
+        case 'google':
+          return 65536; // Gemini 2.5 Flash max output
+        case 'deepseek':
+          return 64000; // DeepSeek R1 max output
+        default:
+          return 16384; // Safe default
+      }
+    };
+    
     // Create new conversation
     const { data: conversation, error } = await supabase
       .from('conversations')
@@ -51,7 +67,8 @@ export async function POST(request: Request) {
         user_id: user.id,
         title: title || 'New Conversation',
         model_provider: model_provider || 'openai',
-        model_name: model_name || 'gpt-4o-mini'
+        model_name: model_name || 'gpt-4o-mini',
+        max_tokens: getModelMaxTokens(model_provider || 'openai') // Use model-specific limit
       })
       .select()
       .single()

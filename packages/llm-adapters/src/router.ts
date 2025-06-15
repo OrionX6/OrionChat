@@ -58,7 +58,8 @@ export class LLMRouter {
     yield* provider.stream(params.messages, {
       ...params.options,
       userId: params.userId,
-      conversationId: params.conversationId
+      conversationId: params.conversationId,
+      model: params.model
     });
   }
   

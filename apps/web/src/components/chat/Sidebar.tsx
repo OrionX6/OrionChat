@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3, Menu, Search, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button-wrapper";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/components/auth/AuthProvider";
 import type { Database } from "@/lib/types/database";
 

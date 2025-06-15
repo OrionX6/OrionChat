@@ -60,6 +60,26 @@ export async function POST(request: NextRequest) {
           let tokenCount = 0;
           const startTime = Date.now();
 
+          // Get model-specific max tokens to avoid API errors
+          const getModelMaxTokens = (provider: string): number => {
+            switch (provider) {
+              case 'openai':
+                return 16384; // GPT-4o-mini max output
+              case 'anthropic':
+                return 8192;  // Claude 3.5 Haiku max output
+              case 'google':
+                return 65536; // Gemini 2.5 Flash max output
+              case 'deepseek':
+                return 64000; // DeepSeek R1 max output
+              default:
+                return 16384; // Safe default
+            }
+          };
+
+          const modelMaxTokens = getModelMaxTokens(provider);
+          const maxTokensUsed = Math.min(conversation.max_tokens || modelMaxTokens, modelMaxTokens);
+          console.log(`🚀 Starting generation for ${provider}/${model} with maxTokens: ${maxTokensUsed} (model limit: ${modelMaxTokens})`);
+
           // Stream the response from the LLM
           for await (const chunk of router.stream({
             messages: chatMessages,
@@ -68,7 +88,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             conversationId,
             options: {
-              maxTokens: conversation.max_tokens || 4096,
+              maxTokens: maxTokensUsed, // Use high default to accommodate full model capabilities
               temperature: conversation.temperature || 0.7,
             }
           })) {
@@ -85,6 +105,7 @@ export async function POST(request: NextRequest) {
             if (chunk.done) {
               const endTime = Date.now();
               const responseTime = endTime - startTime;
+              console.log(`✅ Generation completed: ${tokenCount} tokens in ${responseTime}ms. Final response length: ${fullResponse.length} characters`);
 
               // Perform database operations asynchronously (don't await)
               Promise.all([

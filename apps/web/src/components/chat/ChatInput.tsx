@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Paperclip, Search } from "lucide-react";
 import { ModelSelector } from "./ModelSelector";
@@ -85,15 +86,13 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               )}
 
               {/* Search icon */}
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground")}
                 disabled={disabled}
               >
                 <Search className="h-4 w-4" />
-              </Button>
+              </button>
 
               {/* Text input */}
               <Textarea
@@ -107,25 +106,22 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               />
 
               {/* Attachment button */}
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground")}
                 disabled={disabled}
               >
                 <Paperclip className="h-4 w-4" />
-              </Button>
+              </button>
 
               {/* Send button */}
-              <Button
+              <button
                 type="submit"
                 disabled={!message.trim() || disabled}
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0 rounded-lg bg-primary hover:bg-primary/90"
+                className={cn(buttonVariants({ size: "sm" }), "h-8 w-8 p-0 flex-shrink-0 rounded-lg bg-primary hover:bg-primary/90")}
               >
                 <Send className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
           </form>
 

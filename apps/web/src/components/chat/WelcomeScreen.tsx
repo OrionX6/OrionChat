@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-wrapper";
 import { Sparkles, Code, Lightbulb, BookOpen } from "lucide-react";
 
 interface WelcomeScreenProps {

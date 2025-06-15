@@ -3,8 +3,8 @@ import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions } from '
 
 export class ClaudeHaikuProvider implements CostOptimizedProvider {
   name = 'anthropic';
-  models = ['claude-3-haiku-20240307'];
-  costPerToken = { input: 0.025, output: 0.125 }; // per 1k tokens in cents
+  models = ['claude-3-haiku-20240307', 'claude-3-5-haiku-20241022'];
+  costPerToken = { input: 0.08, output: 0.40 }; // per 1k tokens in cents (updated for 3.5 pricing)
   maxTokens = 200000;
   supportsFunctions = true;
   
@@ -19,9 +19,12 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
       const systemMessage = messages.find(m => m.role === 'system');
       const conversationMessages = messages.filter(m => m.role !== 'system');
       
+      // Use the model from options or default to 3.5 Haiku
+      const modelToUse = options.model || 'claude-3-5-haiku-20241022';
+      
       const stream = await this.client.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: Math.min(options.maxTokens || 4096, 4096), // Haiku has lower limits
+        model: modelToUse,
+        max_tokens: options.maxTokens || 8192, // Claude 3.5 Haiku max output is 8,192 tokens
         temperature: options.temperature || 0.7,
         system: systemMessage?.content,
         messages: conversationMessages.map(msg => ({

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
+import { StreamingMessageBubble } from "./StreamingMessageBubble";
 import { Sidebar } from "./Sidebar";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { Header } from "@/components/layout/Header";
@@ -112,13 +113,30 @@ export function ChatWindow() {
   const createNewConversation = async () => {
     if (!user) return null;
 
+    // Get model-specific max tokens
+    const getModelMaxTokens = (provider: ModelProvider): number => {
+      switch (provider) {
+        case 'openai':
+          return 16384; // GPT-4o-mini max output
+        case 'anthropic':
+          return 8192;  // Claude 3.5 Haiku max output
+        case 'google':
+          return 65536; // Gemini 2.5 Flash max output
+        case 'deepseek':
+          return 64000; // DeepSeek R1 max output
+        default:
+          return 16384; // Safe default
+      }
+    };
+
     const { data, error } = await supabase
       .from('conversations')
       .insert({
         user_id: user.id,
         title: 'New Conversation',
         model_provider: DEFAULT_MODEL.provider,
-        model_name: DEFAULT_MODEL.name
+        model_name: DEFAULT_MODEL.name,
+        max_tokens: getModelMaxTokens(DEFAULT_MODEL.provider) // Use model-specific limit
       })
       .select()
       .single();
@@ -414,21 +432,7 @@ export function ChatWindow() {
                   ))}
 
                   {isStreaming && (
-                    <div className="flex justify-start">
-                      <div className="flex flex-col items-start flex-1 min-w-0">
-                        <div className="bg-muted/50 text-foreground border border-border/50 rounded-2xl px-4 py-3 min-h-[2.5rem] flex items-start w-full">
-                          {streamingMessage ? (
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{streamingMessage}</p>
-                          ) : (
-                            <div className="flex space-x-1 items-center">
-                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                              <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <StreamingMessageBubble content={streamingMessage} />
                   )}
 
                   {loading && !isStreaming && (

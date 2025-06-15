@@ -1,17 +1,13 @@
 {
   "name": "orion-chat-monorepo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
-    "start": "pnpm --filter web start",
-    "lint": "pnpm --filter web lint",
-    "test": "pnpm --recursive test",
-    "typecheck": "pnpm --recursive typecheck"
+    "dev": "cd apps/web && npm run dev",
+    "build": "cd apps/web && npm run build",
+    "start": "cd apps/web && npm run start",
+    "lint": "cd apps/web && npm run lint",
+    "test": "cd apps/web && npm run test",
+    "typecheck": "cd apps/web && npm run typecheck"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -25,7 +21,7 @@
     "supabase": "^2.24.3",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@8.0.0",
+  "packageManager": "npm@10.0.0",
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-slot": "^1.2.3",
