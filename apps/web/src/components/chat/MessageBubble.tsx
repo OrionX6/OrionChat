@@ -8,7 +8,9 @@ import { Copy, RotateCcw, FileText, Image as ImageIcon, Download } from "lucide-
 import type { Database } from "@/lib/types/database";
 import Image from "next/image";
 
-type Message = Database['public']['Tables']['messages']['Row'];
+type Message = Database['public']['Tables']['messages']['Row'] & {
+  attachments?: FileAttachment[] | string;
+};
 
 interface FileAttachment {
   id: string;
@@ -181,10 +183,10 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
         </div>
         <div className={`flex items-center gap-2 mt-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
           <span className="text-xs text-muted-foreground">
-            {new Date(message.created_at).toLocaleTimeString([], {
+            {message.created_at ? new Date(message.created_at).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
-            })}
+            }) : "Now"}
           </span>
           {message.model && (
             <span className="text-xs text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">

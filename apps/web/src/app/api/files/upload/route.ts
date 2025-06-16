@@ -52,34 +52,57 @@ async function uploadPDFToGemini(buffer: ArrayBuffer, fileName: string): Promise
 }
 
 async function uploadPDFToAnthropic(buffer: ArrayBuffer, fileName: string): Promise<string> {
-  try {
-    console.log(`📄 Uploading PDF to Anthropic Files API: ${fileName} (${buffer.byteLength} bytes)`);
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📄 Uploading PDF to Anthropic Files API (attempt ${attempt}/${maxRetries}): ${fileName} (${buffer.byteLength} bytes)`);
+
+      if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+      }
+
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        timeout: 120000, // 2 minutes timeout
+      });
+
+      // Convert ArrayBuffer to File for the upload
+      const fileBuffer = Buffer.from(buffer);
+      const file = new File([fileBuffer], fileName, { type: 'application/pdf' });
+
+      // Upload file to Anthropic Files API with timeout
+      const uploadPromise = anthropic.beta.files.upload({
+        file: file,
+        betas: ['files-api-2025-04-14']
+      });
+
+      // Race against timeout
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout after 2 minutes')), 120000);
+      });
+
+      const uploadResult = await Promise.race([uploadPromise, timeoutPromise]);
+
+      console.log('✅ PDF uploaded to Anthropic successfully:', uploadResult.id);
+      return uploadResult.id;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      console.error(`❌ Anthropic upload attempt ${attempt} failed:`, lastError.message);
+      
+      // If this was the last attempt, don't wait
+      if (attempt < maxRetries) {
+        // Wait before retrying (exponential backoff)
+        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
-
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    // Convert ArrayBuffer to File for the upload
-    const fileBuffer = Buffer.from(buffer);
-    const file = new File([fileBuffer], fileName, { type: 'application/pdf' });
-
-    // Upload file to Anthropic Files API
-    const uploadResult = await anthropic.beta.files.upload({
-      file: file,
-      betas: ['files-api-2025-04-14']
-    });
-
-    console.log('✅ PDF uploaded to Anthropic successfully:', uploadResult.id);
-
-    return uploadResult.id;
-  } catch (error) {
-    console.error('❌ PDF upload to Anthropic failed:', error);
-    throw new Error(`Failed to upload PDF to Anthropic: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+
+  throw new Error(`Failed to upload PDF to Anthropic after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
 }
 
 async function uploadPDFToOpenAI(buffer: ArrayBuffer, fileName: string): Promise<string> {
@@ -134,6 +157,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const conversationId = formData.get('conversationId') as string;
+    const modelProvider = formData.get('modelProvider') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -189,34 +213,45 @@ export async function POST(req: NextRequest) {
 
     try {
       if (isPdf) {
-        console.log('🔍 PDF detected, uploading to AI provider APIs...');
+        console.log(`🔍 PDF detected, uploading to ${modelProvider || 'all'} provider(s)...`);
 
-        // Upload to Gemini Files API
-        try {
-          geminiFileUri = await uploadPDFToGemini(buffer, file.name);
-          console.log('✅ PDF uploaded to Gemini successfully. URI:', geminiFileUri);
-        } catch (error) {
-          console.error('❌ Gemini upload failed:', error);
+        // Only upload to the selected provider (if specified)
+        if (modelProvider === 'google' || !modelProvider) {
+          try {
+            geminiFileUri = await uploadPDFToGemini(buffer, file.name);
+            console.log('✅ PDF uploaded to Gemini successfully. URI:', geminiFileUri);
+          } catch (error) {
+            console.error('❌ Gemini upload failed:', error);
+          }
         }
 
-        // Upload to Anthropic Files API
-        try {
-          anthropicFileId = await uploadPDFToAnthropic(buffer, file.name);
-          console.log('✅ PDF uploaded to Anthropic successfully. ID:', anthropicFileId);
-        } catch (error) {
-          console.error('❌ Anthropic upload failed:', error);
+        if (modelProvider === 'anthropic' || !modelProvider) {
+          try {
+            anthropicFileId = await uploadPDFToAnthropic(buffer, file.name);
+            console.log('✅ PDF uploaded to Anthropic successfully. ID:', anthropicFileId);
+          } catch (error) {
+            console.error('❌ Anthropic upload failed:', error);
+          }
         }
 
-        // Upload to OpenAI Files API
-        try {
-          openaiFileId = await uploadPDFToOpenAI(buffer, file.name);
-          console.log('✅ PDF uploaded to OpenAI successfully. ID:', openaiFileId);
-        } catch (error) {
-          console.error('❌ OpenAI upload failed:', error);
+        if (modelProvider === 'openai' || !modelProvider) {
+          try {
+            openaiFileId = await uploadPDFToOpenAI(buffer, file.name);
+            console.log('✅ PDF uploaded to OpenAI successfully. ID:', openaiFileId);
+          } catch (error) {
+            console.error('❌ OpenAI upload failed:', error);
+          }
         }
 
         // Store a reference message
-        extractedText = `PDF uploaded to AI providers - Gemini: ${geminiFileUri || 'failed'}, Anthropic: ${anthropicFileId || 'failed'}, OpenAI: ${openaiFileId || 'failed'}`;
+        const uploadedProviders = [];
+        if (geminiFileUri) uploadedProviders.push(`Gemini: ${geminiFileUri}`);
+        if (anthropicFileId) uploadedProviders.push(`Anthropic: ${anthropicFileId}`);
+        if (openaiFileId) uploadedProviders.push(`OpenAI: ${openaiFileId}`);
+        
+        extractedText = uploadedProviders.length > 0 
+          ? `PDF uploaded to: ${uploadedProviders.join(', ')}`
+          : 'PDF upload failed for all providers';
       }
     } catch (error) {
       console.error('❌ File processing error:', error);
