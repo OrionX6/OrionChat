@@ -12,7 +12,7 @@ interface FileAttachment {
 }
 
 interface AttachmentContent {
-  type: 'text' | 'image_url' | 'image_base64' | 'pdf' | 'file_uri';
+  type: 'text' | 'image_url' | 'image_base64' | 'pdf' | 'file_uri' | 'file_id';
   text?: string;
   image_url?: {
     url: string;
@@ -24,6 +24,7 @@ interface AttachmentContent {
   };
   pdf_content?: string;
   file_uri?: string;
+  file_id?: string;
   mime_type?: string;
 }
 
@@ -72,11 +73,11 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
           }
         }
       } else if (attachment.type === 'application/pdf') {
-        // For PDFs, retrieve Gemini file URI from database
+        // For PDFs, retrieve provider file IDs from database
         console.log('📄 Retrieving PDF data for attachment:', attachment.id);
         const { data: fileData, error: fileError } = await supabase
           .from('files')
-          .select('gemini_file_uri, processing_status, original_name, extracted_text')
+          .select('gemini_file_uri, anthropic_file_id, processing_status, original_name, extracted_text')
           .eq('id', attachment.id)
           .single();
 
@@ -87,31 +88,36 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
             name: fileData.original_name,
             processing_status: fileData.processing_status,
             has_gemini_uri: !!fileData.gemini_file_uri,
-            gemini_uri: fileData.gemini_file_uri
+            has_anthropic_id: !!fileData.anthropic_file_id,
+            provider: provider
           });
         }
 
-        if (fileData?.gemini_file_uri) {
+        // Handle different providers with their native file APIs
+        if (provider === 'google' && fileData?.gemini_file_uri) {
           // For Gemini, use the file URI directly
-          if (provider === 'google') {
+          processedContent.push({
+            type: 'file_uri',
+            file_uri: fileData.gemini_file_uri,
+            mime_type: 'application/pdf'
+          });
+        } else if (provider === 'anthropic' && fileData?.anthropic_file_id) {
+          // For Anthropic, use the file ID directly
+          processedContent.push({
+            type: 'file_id',
+            file_id: fileData.anthropic_file_id,
+            mime_type: 'application/pdf'
+          });
+        } else {
+          // For other providers or fallback, use extracted text if available
+          if (fileData?.extracted_text) {
             processedContent.push({
-              type: 'file_uri',
-              file_uri: fileData.gemini_file_uri,
-              mime_type: 'application/pdf'
+              type: 'pdf',
+              pdf_content: fileData.extracted_text
             });
           } else {
-            // For other providers, fall back to extracted text if available
-            if (fileData.extracted_text) {
-              processedContent.push({
-                type: 'pdf',
-                pdf_content: fileData.extracted_text
-              });
-            } else {
-              console.warn('⚠️ No extracted text available for non-Gemini provider');
-            }
+            console.warn(`⚠️ No native file support available for provider ${provider} and PDF ${attachment.id}`);
           }
-        } else {
-          console.warn('⚠️ No Gemini file URI found for PDF:', attachment.id);
         }
       }
     } catch (error) {
@@ -180,7 +186,7 @@ export async function POST(request: NextRequest) {
       // Add multimodal content to the last user message if attachments exist
       if (msg.role === 'user' && index === messages.length - 1 && processedAttachments.length > 0) {
         // Check if the provider supports multimodal content
-        const supportsMultimodal = provider === 'openai' || provider === 'google';
+        const supportsMultimodal = provider === 'openai' || provider === 'google' || provider === 'anthropic';
         
         if (supportsMultimodal) {
           // For multimodal providers, format as structured content array
@@ -211,6 +217,14 @@ export async function POST(request: NextRequest) {
                 return {
                   type: 'file_uri',
                   file_uri: attachment.file_uri,
+                  mime_type: attachment.mime_type
+                };
+              } else if (attachment.type === 'file_id') {
+                // For Anthropic file IDs, use the file reference directly
+                console.log('Adding file ID to multimodal content for Anthropic:', attachment.file_id);
+                return {
+                  type: 'file_id',
+                  file_id: attachment.file_id,
                   mime_type: attachment.mime_type
                 };
               } else if (attachment.type === 'pdf') {

@@ -13,7 +13,8 @@
     "@orion-chat/shared-types": "file:../shared-types",
     "openai": "^4.0.0",
     "@anthropic-ai/sdk": "^0.27.0",
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.0.0"
   },
   "devDependencies": {
     "typescript": "^5",

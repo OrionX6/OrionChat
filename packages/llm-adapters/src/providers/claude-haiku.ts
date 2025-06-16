@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions } from '../types';
+import { createClient } from '@supabase/supabase-js';
 
 export class ClaudeHaikuProvider implements CostOptimizedProvider {
   name = 'anthropic';
@@ -15,21 +16,109 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
     this.client = new Anthropic({ apiKey });
   }
 
-  private convertToClaudeContent(content: string | any[]): string {
-    // Since Claude 3.5 Haiku is text-only, convert multimodal to text
+  private async convertToClaudeContent(content: string | any[], options?: StreamOptions): Promise<any> {
+    // Claude 3.5 Haiku supports text and PDFs via base64 encoding
     if (Array.isArray(content)) {
-      return content
-        .map(item => {
-          if (item.type === 'text') {
-            return item.text || '';
-          } else if (item.type === 'image') {
-            return '[Image content - not supported by Claude 3.5 Haiku]';
+      const contentBlocks = [];
+
+      for (const item of content) {
+        if (item.type === 'text') {
+          contentBlocks.push({
+            type: 'text',
+            text: item.text || ''
+          });
+        } else if (item.type === 'file_id') {
+          // Get PDF from storage and convert to base64
+          try {
+            const base64Data = await this.getPDFAsBase64(item.file_id, options?.userId);
+            if (base64Data) {
+              contentBlocks.push({
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: base64Data
+                }
+              });
+            } else {
+              contentBlocks.push({
+                type: 'text',
+                text: '[PDF file could not be loaded]'
+              });
+            }
+          } catch (error) {
+            console.error('Error loading PDF for Claude:', error);
+            contentBlocks.push({
+              type: 'text',
+              text: '[PDF file could not be loaded]'
+            });
           }
-          return '';
-        })
-        .join('');
+        } else if (item.type === 'image') {
+          contentBlocks.push({
+            type: 'text',
+            text: '[Image content - not supported by Claude 3.5 Haiku]'
+          });
+        } else if (item.type === 'file_uri') {
+          contentBlocks.push({
+            type: 'text',
+            text: '[PDF file content - not available for Claude 3.5 Haiku]'
+          });
+        }
+      }
+
+      return contentBlocks;
     }
     return content;
+  }
+
+  private async getPDFAsBase64(anthropicFileId: string, userId?: string): Promise<string | null> {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing Supabase credentials for PDF retrieval');
+      return null;
+    }
+
+    try {
+      // Create Supabase client with service role key to access storage
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+
+      // Find the file record by anthropic_file_id
+      const { data: fileRecord, error: fileError } = await supabase
+        .from('files')
+        .select('storage_path, user_id')
+        .eq('anthropic_file_id', anthropicFileId)
+        .single();
+
+      if (fileError || !fileRecord) {
+        console.error('File record not found for anthropic_file_id:', anthropicFileId);
+        return null;
+      }
+
+      // Verify user ownership if userId provided
+      if (userId && fileRecord.user_id !== userId) {
+        console.error('User does not own this file');
+        return null;
+      }
+
+      // Download the file from storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('attachments')
+        .download(fileRecord.storage_path);
+
+      if (downloadError || !fileData) {
+        console.error('Failed to download file from storage:', downloadError);
+        return null;
+      }
+
+      // Convert to base64
+      const arrayBuffer = await fileData.arrayBuffer();
+      return Buffer.from(arrayBuffer).toString('base64');
+    } catch (error) {
+      console.error('Error retrieving PDF for base64 conversion:', error);
+      return null;
+    }
   }
   
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
@@ -37,20 +126,29 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
       const systemMessage = messages.find(m => m.role === 'system');
       const conversationMessages = messages.filter(m => m.role !== 'system');
       
-      // Use the model from options or default to 3.5 Haiku
-      const modelToUse = options.model || 'claude-3-5-haiku-20241022';
-      
-      const stream = await this.client.messages.create({
-        model: modelToUse,
-        max_tokens: options.maxTokens || 8192, // Claude 3.5 Haiku max output is 8,192 tokens
+      // Check if any message has file content that requires beta support
+      const hasFileContent = conversationMessages.some(msg => 
+        Array.isArray(msg.content) && 
+        msg.content.some(item => item.type === 'file_id')
+      );
+
+      const createParams: any = {
+        model: 'claude-3-5-sonnet-20241022', // Updated to claude-3-5-sonnet for PDF support
+        max_tokens: options.maxTokens || 8192,
         temperature: options.temperature || 0.7,
-        system: systemMessage ? this.convertToClaudeContent(systemMessage.content) : undefined,
-        messages: conversationMessages.map(msg => ({
+        system: systemMessage ? await this.convertToClaudeContent(systemMessage.content, options) : undefined,
+        messages: await Promise.all(conversationMessages.map(async msg => ({
           role: msg.role as 'user' | 'assistant',
-          content: this.convertToClaudeContent(msg.content)
-        })),
+          content: await this.convertToClaudeContent(msg.content, options)
+        }))),
         stream: true
-      });
+      };
+
+      // Beta header is already set above for PDF support
+      // Suppress unused variable warning
+      void hasFileContent;
+
+      const stream = this.client.messages.stream(createParams);
       
       for await (const chunk of stream) {
         if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {

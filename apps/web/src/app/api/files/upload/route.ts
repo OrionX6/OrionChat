@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
+import Anthropic from '@anthropic-ai/sdk';
 
 const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const SUPPORTED_PDF_TYPES = ['application/pdf'];
@@ -46,6 +47,37 @@ async function uploadPDFToGemini(buffer: ArrayBuffer, fileName: string): Promise
   } catch (error) {
     console.error('❌ PDF upload to Gemini failed:', error);
     throw new Error(`Failed to upload PDF to Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+async function uploadPDFToAnthropic(buffer: ArrayBuffer, fileName: string): Promise<string> {
+  try {
+    console.log(`📄 Uploading PDF to Anthropic Files API: ${fileName} (${buffer.byteLength} bytes)`);
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
+    // Convert ArrayBuffer to File for the upload
+    const fileBuffer = Buffer.from(buffer);
+    const file = new File([fileBuffer], fileName, { type: 'application/pdf' });
+
+    // Upload file to Anthropic Files API
+    const uploadResult = await anthropic.beta.files.upload({
+      file: file,
+      betas: ['files-api-2025-04-14']
+    });
+
+    console.log('✅ PDF uploaded to Anthropic successfully:', uploadResult.id);
+
+    return uploadResult.id;
+  } catch (error) {
+    console.error('❌ PDF upload to Anthropic failed:', error);
+    throw new Error(`Failed to upload PDF to Anthropic: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -119,21 +151,37 @@ export async function POST(req: NextRequest) {
     // Process file based on type
     let extractedText: string | undefined;
     let geminiFileUri: string | undefined;
+    let anthropicFileId: string | undefined;
     let processingStatus: 'completed' | 'failed' = 'completed';
 
     try {
       if (isPdf) {
-        console.log('🔍 PDF detected, uploading to Gemini Files API...');
-        geminiFileUri = await uploadPDFToGemini(buffer, file.name);
-        console.log('✅ PDF uploaded to Gemini successfully. URI:', geminiFileUri);
-        // Store a reference message instead of extracted text
-        extractedText = `PDF uploaded to Gemini Files API: ${geminiFileUri}`;
+        console.log('🔍 PDF detected, uploading to AI provider APIs...');
+
+        // Upload to Gemini Files API
+        try {
+          geminiFileUri = await uploadPDFToGemini(buffer, file.name);
+          console.log('✅ PDF uploaded to Gemini successfully. URI:', geminiFileUri);
+        } catch (error) {
+          console.error('❌ Gemini upload failed:', error);
+        }
+
+        // Upload to Anthropic Files API
+        try {
+          anthropicFileId = await uploadPDFToAnthropic(buffer, file.name);
+          console.log('✅ PDF uploaded to Anthropic successfully. ID:', anthropicFileId);
+        } catch (error) {
+          console.error('❌ Anthropic upload failed:', error);
+        }
+
+        // Store a reference message
+        extractedText = `PDF uploaded to AI providers - Gemini: ${geminiFileUri || 'failed'}, Anthropic: ${anthropicFileId || 'failed'}`;
       }
     } catch (error) {
       console.error('❌ File processing error:', error);
       processingStatus = 'failed';
       // Set a meaningful error message
-      extractedText = `Error uploading PDF to Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      extractedText = `Error uploading PDF: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
 
     // Upload file to storage
@@ -174,7 +222,8 @@ export async function POST(req: NextRequest) {
         file_size: file.size,
         processing_status: processingStatus,
         extracted_text: extractedText,
-        gemini_file_uri: geminiFileUri // Store the Gemini file URI
+        gemini_file_uri: geminiFileUri, // Store the Gemini file URI
+        anthropic_file_id: anthropicFileId // Store the Anthropic file ID
       })
       .select()
       .single();

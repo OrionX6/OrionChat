@@ -1,5 +1,5 @@
 export interface MultimodalContent {
-  type: 'text' | 'image' | 'file_uri';
+  type: 'text' | 'image' | 'file_uri' | 'file_id';
   text?: string;
   image?: {
     url?: string;
@@ -7,6 +7,7 @@ export interface MultimodalContent {
     mimeType?: string;
   };
   file_uri?: string;
+  file_id?: string;
   mime_type?: string;
 }
 
