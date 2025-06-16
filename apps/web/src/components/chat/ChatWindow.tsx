@@ -12,8 +12,30 @@ import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_MODEL, ModelProvider } from "@/lib/constants/models";
 import type { Database } from "@/lib/types/database";
 
-type Message = Database['public']['Tables']['messages']['Row'];
-type Conversation = Database['public']['Tables']['conversations']['Row'];
+// Extended types to match actual database schema
+type Conversation = Database['public']['Tables']['conversations']['Row'] & {
+  max_tokens?: number | null;
+  temperature?: number | null;
+  message_count?: number | null;
+  total_tokens_used?: number | null;
+  total_cost_usd?: number | null;
+  last_message_at?: string | null;
+  is_image_generation_enabled?: boolean | null;
+  is_web_search_enabled?: boolean | null;
+};
+
+type Message = Database['public']['Tables']['messages']['Row'] & {
+  user_id: string;
+  cost_usd?: number | null;
+  response_time_ms?: number | null;
+  finish_reason?: string | null;
+  tool_calls?: any;
+  attachments?: any;
+  updated_at?: string | null;
+  document_context?: any | null;
+  metadata?: any | null;
+  embedding?: string | null;
+};
 
 interface FileAttachment {
   id: string;
@@ -176,6 +198,7 @@ export function ChatWindow() {
         title: data.title,
         model_provider: data.model_provider,
         model_name: data.model_name,
+        document_id: data.document_id || null,
         max_tokens: data.max_tokens || null,
         temperature: data.temperature || null,
         system_prompt: data.system_prompt || null,
@@ -215,6 +238,7 @@ export function ChatWindow() {
         title: data.title,
         model_provider: data.model_provider,
         model_name: data.model_name,
+        document_id: data.document_id || null,
         max_tokens: data.max_tokens || null,
         temperature: data.temperature || null,
         system_prompt: data.system_prompt || null,
@@ -285,6 +309,7 @@ export function ChatWindow() {
       title: data.title,
       model_provider: data.model_provider,
       model_name: data.model_name,
+      document_id: data.document_id || null,
       max_tokens: data.max_tokens || null,
       temperature: data.temperature || null,
       system_prompt: data.system_prompt || null,
@@ -346,6 +371,7 @@ export function ChatWindow() {
       title: data.title,
       model_provider: data.model_provider,
       model_name: data.model_name,
+      document_id: data.document_id || null,
       max_tokens: data.max_tokens || null,
       temperature: data.temperature || null,
       system_prompt: data.system_prompt || null,
@@ -460,6 +486,8 @@ export function ChatWindow() {
                     tool_calls: null,
                     attachments: null,
                     embedding: null,
+                    document_context: null,
+                    metadata: null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   };
@@ -622,6 +650,8 @@ export function ChatWindow() {
                     tool_calls: null,
                     attachments: null,
                     embedding: null,
+                    document_context: null,
+                    metadata: null,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   };

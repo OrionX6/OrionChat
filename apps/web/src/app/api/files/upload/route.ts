@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { GoogleAIFileManager } from '@google/generative-ai/server';
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const SUPPORTED_PDF_TYPES = ['application/pdf'];
@@ -81,6 +82,37 @@ async function uploadPDFToAnthropic(buffer: ArrayBuffer, fileName: string): Prom
   }
 }
 
+async function uploadPDFToOpenAI(buffer: ArrayBuffer, fileName: string): Promise<string> {
+  try {
+    console.log(`📄 Uploading PDF to OpenAI Files API: ${fileName} (${buffer.byteLength} bytes)`);
+
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Convert ArrayBuffer to File for the upload
+    const fileBuffer = Buffer.from(buffer);
+    const file = new File([fileBuffer], fileName, { type: 'application/pdf' });
+
+    // Upload file to OpenAI Files API with user_data purpose
+    const uploadResult = await openai.files.create({
+      file: file,
+      purpose: 'user_data'
+    });
+
+    console.log('✅ PDF uploaded to OpenAI successfully:', uploadResult.id);
+
+    return uploadResult.id;
+  } catch (error) {
+    console.error('❌ PDF upload to OpenAI failed:', error);
+    throw new Error(`Failed to upload PDF to OpenAI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -152,6 +184,7 @@ export async function POST(req: NextRequest) {
     let extractedText: string | undefined;
     let geminiFileUri: string | undefined;
     let anthropicFileId: string | undefined;
+    let openaiFileId: string | undefined;
     let processingStatus: 'completed' | 'failed' = 'completed';
 
     try {
@@ -174,8 +207,16 @@ export async function POST(req: NextRequest) {
           console.error('❌ Anthropic upload failed:', error);
         }
 
+        // Upload to OpenAI Files API
+        try {
+          openaiFileId = await uploadPDFToOpenAI(buffer, file.name);
+          console.log('✅ PDF uploaded to OpenAI successfully. ID:', openaiFileId);
+        } catch (error) {
+          console.error('❌ OpenAI upload failed:', error);
+        }
+
         // Store a reference message
-        extractedText = `PDF uploaded to AI providers - Gemini: ${geminiFileUri || 'failed'}, Anthropic: ${anthropicFileId || 'failed'}`;
+        extractedText = `PDF uploaded to AI providers - Gemini: ${geminiFileUri || 'failed'}, Anthropic: ${anthropicFileId || 'failed'}, OpenAI: ${openaiFileId || 'failed'}`;
       }
     } catch (error) {
       console.error('❌ File processing error:', error);
@@ -223,7 +264,8 @@ export async function POST(req: NextRequest) {
         processing_status: processingStatus,
         extracted_text: extractedText,
         gemini_file_uri: geminiFileUri, // Store the Gemini file URI
-        anthropic_file_id: anthropicFileId // Store the Anthropic file ID
+        anthropic_file_id: anthropicFileId, // Store the Anthropic file ID
+        openai_file_id: openaiFileId // Store the OpenAI file ID
       })
       .select()
       .single();

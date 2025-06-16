@@ -77,7 +77,7 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
         console.log('📄 Retrieving PDF data for attachment:', attachment.id);
         const { data: fileData, error: fileError } = await supabase
           .from('files')
-          .select('gemini_file_uri, anthropic_file_id, processing_status, original_name, extracted_text')
+          .select('gemini_file_uri, anthropic_file_id, openai_file_id, processing_status, original_name, extracted_text')
           .eq('id', attachment.id)
           .single();
 
@@ -89,6 +89,7 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
             processing_status: fileData.processing_status,
             has_gemini_uri: !!fileData.gemini_file_uri,
             has_anthropic_id: !!fileData.anthropic_file_id,
+            has_openai_id: !!fileData.openai_file_id,
             provider: provider
           });
         }
@@ -106,6 +107,13 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
           processedContent.push({
             type: 'file_id',
             file_id: fileData.anthropic_file_id,
+            mime_type: 'application/pdf'
+          });
+        } else if (provider === 'openai' && fileData?.openai_file_id) {
+          // For OpenAI, use the file ID directly
+          processedContent.push({
+            type: 'file_id',
+            file_id: fileData.openai_file_id,
             mime_type: 'application/pdf'
           });
         } else {

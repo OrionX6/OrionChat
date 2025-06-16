@@ -33,6 +33,14 @@ export class OpenAIMiniProvider implements CostOptimizedProvider {
                 detail: 'auto'
               } 
             };
+          } else if (item.type === 'file_id') {
+            // Handle PDF files using OpenAI's file_id format
+            return {
+              type: 'file',
+              file: {
+                file_id: item.file_id
+              }
+            };
           }
           return { type: 'text', text: '' };
         })

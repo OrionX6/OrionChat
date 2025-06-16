@@ -111,9 +111,9 @@ The chat uses Server-Sent Events for real-time AI responses:
 
 ### Database Schema
 Key tables:
-- `conversations` - Chat conversations with model configuration
-- `messages` - Individual messages with embeddings for search
-- `files` - File attachments with processing status
+- `conversations` - Chat conversations with model configuration and settings
+- `messages` - Individual messages with embeddings, attachments, and metadata
+- `files` - File attachments with multi-provider upload support (stores `gemini_file_uri`, `anthropic_file_id`, `openai_file_id`)
 - `user_profiles` - User preferences and settings
 
 ## Important Development Notes
@@ -139,9 +139,9 @@ When working on chat functionality:
 
 ### LLM Provider Integration
 The `@orion-chat/llm-adapters` package provides unified interface for:
-- OpenAI (gpt-4o-mini for cost optimization)
-- Anthropic (Claude models)
-- Google AI (Gemini models)
+- OpenAI (gpt-4o-mini for cost optimization) - **Supports PDF uploads via Files API**
+- Anthropic (Claude 3.5 Haiku) - **Supports PDF uploads with base64 encoding**
+- Google AI (Gemini models) - **Supports PDF uploads via Files API**
 - DeepSeek (reasoning models)
 
 ### Environment Variables Required
@@ -169,16 +169,47 @@ DEEPSEEK_API_KEY=
 1. Create provider adapter in `packages/llm-adapters/src/providers/`
 2. Update `LLMRouter` to include new provider
 3. Add provider configuration to `ModelSelector.tsx`
+4. For PDF support: Add file upload logic to `api/files/upload/route.ts`
+
+### PDF File Support Implementation
+The application supports PDF uploads to multiple LLM providers:
+
+**File Upload Process (`api/files/upload/route.ts`)**:
+1. PDFs are uploaded simultaneously to all supported provider APIs:
+   - OpenAI: Uses Files API with `purpose: "user_data"`
+   - Anthropic: Uses Files API with beta headers
+   - Gemini: Uses FileManager with display name
+2. Provider-specific file IDs are stored in the `files` table
+3. Files are also stored in Supabase storage for fallback access
+
+**Chat Integration (`api/chat/stream/route.ts`)**:
+- PDF attachments are processed based on provider:
+  - OpenAI: Uses `file_id` reference in message content
+  - Anthropic: Downloads from storage, converts to base64
+  - Gemini: Uses `file_uri` reference directly
+- Multimodal content is structured per provider's API requirements
+
+**Provider Implementations**:
+- **OpenAI** (`openai-mini.ts`): Direct file_id reference with `type: 'file'`
+- **Anthropic** (`claude-haiku.ts`): Base64 conversion with `type: 'document'`
+- **Gemini**: File URI reference (existing implementation)
 
 ### Database Schema Changes
 1. Create migration in `supabase/migrations/`
 2. Run `supabase db reset` to apply locally
 3. Regenerate types: `supabase gen types typescript --local`
+4. **Important**: If types don't match actual schema, manually extend types in component files
 
 ### Testing Streaming
 - Use browser DevTools Network tab to monitor SSE connections
 - Check `data:` events for proper JSON formatting
 - Verify database operations don't block streaming responses
+
+### Testing PDF Support
+1. Upload PDF files through the chat interface
+2. Verify successful upload to all provider APIs in console logs
+3. Test chat functionality with each supported model (GPT-4o-mini, Claude 3.5 Haiku, Gemini)
+4. Check file processing status in Supabase `files` table
 
 ## Troubleshooting
 
@@ -188,8 +219,16 @@ DEEPSEEK_API_KEY=
 - **Supabase connection**: Verify `supabase start` is running locally
 - **Streaming issues**: Check network tab for SSE connection status
 - **Type errors**: Regenerate database types after schema changes
+- **PDF upload failures**: Check API keys for all providers (OpenAI, Anthropic, Google AI)
+- **TypeScript errors**: If auto-generated types don't match schema, manually extend types with intersection (&) operator
 
 ### Performance Issues
 - Monitor streaming response times in browser DevTools
 - Check database query performance in Supabase Studio
 - Verify async database operations aren't blocking streams
+
+### PDF-Specific Troubleshooting
+- **File size limits**: OpenAI (32MB), Anthropic (varies), Gemini (varies)
+- **Model compatibility**: Ensure using PDF-compatible models (GPT-4o-mini, Claude 3.5 Haiku, Gemini)
+- **API errors**: Check provider-specific error messages in console
+- **Base64 conversion issues**: Monitor Supabase storage access for Anthropic implementation
