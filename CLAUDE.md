@@ -142,6 +142,7 @@ The `@orion-chat/llm-adapters` package provides unified interface for:
 - OpenAI (gpt-4o-mini for cost optimization) - **Supports PDF uploads via Files API**
 - Anthropic (Claude 3.5 Haiku) - **Supports PDF uploads with base64 encoding**
 - Google AI (Gemini models) - **Supports PDF uploads via Files API**
+- Google Vertex AI (Gemini models with native web search) - **Supports native search grounding**
 - DeepSeek (reasoning models) - **Supports web search via function calling**
 
 ### Environment Variables Required
@@ -156,6 +157,11 @@ OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 GOOGLE_AI_API_KEY=
 DEEPSEEK_API_KEY=
+
+# Vertex AI (for Gemini web search)
+GOOGLE_CLOUD_PROJECT=your_project_id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS={"type":"service_account",...}
 ```
 
 ## Common Development Tasks
@@ -251,6 +257,30 @@ Claude 3.5 Haiku supports both PDF documents and image analysis. Key implementat
 3. Test chat functionality with each supported model (GPT-4o-mini, Claude 3.5 Haiku, Gemini)
 4. Check file processing status in Supabase `files` table
 
+### Gemini Web Search Integration (Vertex AI)
+**Native Search Grounding**:
+- Gemini 2.0 Flash and 2.5 Flash support native web search through Google's Vertex AI
+- Uses `google_search: {}` tool configuration for search grounding
+- Automatically includes search results in responses when enabled
+- Smart routing: Regular Gemini API for chat, Vertex AI when search is enabled
+
+**Implementation Details**:
+- **Provider**: `GeminiVertexProvider` handles authentication and search tools
+- **Authentication**: Uses service account JSON credentials for Vertex AI access
+- **Search Tool**: `tools: [{ google_search: {} }]` enables native search grounding
+- **UI Integration**: Search toggle automatically routes to Vertex AI when enabled
+
+**Technical Architecture**:
+```javascript
+// Smart provider routing in API route
+const shouldUseVertexAI = isGeminiModel && webSearch && conversation.is_web_search_enabled;
+if (shouldUseVertexAI) {
+  actualProvider = 'google-vertex';
+}
+```
+
+**Search Grounding Output**: Responses include search sources, queries used, and grounding metadata automatically.
+
 ### DeepSeek R1 Web Search Integration
 **Capability Overview**:
 - DeepSeek R1 supports web search through function calling (not built-in)
@@ -299,6 +329,14 @@ const searchFunction = {
 - **Images not working but PDFs working**: Fixed by removing global `anthropic-beta` header and applying it conditionally only for PDF content
 - **Vision capability**: Claude 3.5 Haiku supports vision as of February 24th, 2025 - no special beta header required for images
 - **Beta header conflicts**: PDF and vision capabilities use different requirements - PDF needs `anthropic-beta: pdfs-2024-09-25`, images work with default API
+
+### Vertex AI Authentication Troubleshooting
+- **"Unable to authenticate your request" error**: Fixed by implementing JSON credential parsing for serverless environments
+- **GoogleAuthError in Vercel**: The `GOOGLE_APPLICATION_CREDENTIALS` environment variable must contain the actual JSON content, not a file path
+- **Authentication method**: Vertex AI provider now tries JSON parsing first, then falls back to file path for local development
+- **Environment variable format**: In Vercel, paste the entire service account JSON as the `GOOGLE_APPLICATION_CREDENTIALS` value
+- **Debug endpoint**: Use `/api/debug-vertex` to verify environment variables are properly loaded in production
+- **Smart routing**: Gemini models automatically use Vertex AI when web search is enabled
 
 ### PDF-Specific Troubleshooting
 - **File size limits**: OpenAI (32MB), Anthropic (varies), Gemini (varies)
