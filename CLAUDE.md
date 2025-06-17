@@ -8,7 +8,7 @@ OrionChat is an MIT-licensed, open-source AI chat application built with Next.js
 
 ## Architecture
 
-This is a **pnpm monorepo** with the following structure:
+This is a **npm monorepo** with the following structure:
 
 - `apps/web/` - Next.js 15 application (App Router)
 - `packages/shared-types/` - TypeScript definitions shared across packages
@@ -35,19 +35,19 @@ This is a **pnpm monorepo** with the following structure:
 ### Root Level (Monorepo)
 ```bash
 # Start development server
-pnpm dev
+npm run dev
 
 # Build all packages and apps
-pnpm build
+npm run build
 
 # Run linting across all workspaces
-pnpm lint
+npm run lint
 
 # Type checking across all workspaces
-pnpm typecheck
+npm run typecheck
 
 # Run tests across all workspaces
-pnpm test
+npm test
 ```
 
 ### Web App (apps/web/)
@@ -142,7 +142,7 @@ The `@orion-chat/llm-adapters` package provides unified interface for:
 - OpenAI (gpt-4o-mini for cost optimization) - **Supports PDF uploads via Files API**
 - Anthropic (Claude 3.5 Haiku) - **Supports PDF uploads with base64 encoding**
 - Google AI (Gemini models) - **Supports PDF uploads via Files API**
-- DeepSeek (reasoning models)
+- DeepSeek (reasoning models) - **Supports web search via function calling**
 
 ### Environment Variables Required
 ```bash
@@ -170,17 +170,19 @@ DEEPSEEK_API_KEY=
 2. Update `LLMRouter` to include new provider
 3. Add provider configuration to `ModelSelector.tsx`
 4. For PDF support: Add file upload logic to `api/files/upload/route.ts`
+5. For web search: Implement function calling with external search APIs (SerpAPI, Bing, etc.)
 
 ### PDF File Support Implementation
 The application supports PDF uploads to multiple LLM providers:
 
 **File Upload Process (`api/files/upload/route.ts`)**:
-1. PDFs are uploaded simultaneously to all supported provider APIs:
+1. **Optimized Provider-Specific Uploads**: PDFs are uploaded only to the currently selected AI provider (not all providers):
    - OpenAI: Uses Files API with `purpose: "user_data"`
-   - Anthropic: Uses Files API with beta headers
+   - Anthropic: Uses Files API with beta headers and retry logic for timeout handling
    - Gemini: Uses FileManager with display name
 2. Provider-specific file IDs are stored in the `files` table
 3. Files are also stored in Supabase storage for fallback access
+4. **Performance**: Upload time reduced by ~66% since only one provider upload occurs instead of three
 
 **Chat Integration (`api/chat/stream/route.ts`)**:
 - PDF attachments are processed based on provider:
@@ -193,6 +195,18 @@ The application supports PDF uploads to multiple LLM providers:
 - **OpenAI** (`openai-mini.ts`): Direct file_id reference with `type: 'file'`
 - **Anthropic** (`claude-haiku.ts`): Base64 conversion with `type: 'document'`
 - **Gemini**: File URI reference (existing implementation)
+
+### File Upload UX Implementation
+**Enhanced Upload Experience (`ChatInput.tsx`)**:
+1. **Non-blocking Input**: Users can type messages while files are uploading
+2. **Real-time Progress**: XMLHttpRequest-based progress tracking with accurate percentages
+3. **Upload Cancellation**: Users can cancel uploads in progress using the X button
+4. **Visual Feedback**: 
+   - Spinning loader with percentage display during upload
+   - Image thumbnails for uploaded images (8x8px previews)
+   - Progress bar showing actual upload progress (0-80%) + server processing (80-100%)
+5. **Smart Progress Tracking**: Accounts for both file transfer and server-side provider uploads
+6. **Optimistic UI**: Files appear immediately with uploading state before actual upload
 
 ### Database Schema Changes
 1. Create migration in `supabase/migrations/`
@@ -207,19 +221,46 @@ The application supports PDF uploads to multiple LLM providers:
 
 ### Testing PDF Support
 1. Upload PDF files through the chat interface
-2. Verify successful upload to all provider APIs in console logs
+2. Verify successful upload to selected provider API in console logs
 3. Test chat functionality with each supported model (GPT-4o-mini, Claude 3.5 Haiku, Gemini)
 4. Check file processing status in Supabase `files` table
+
+### DeepSeek R1 Web Search Integration
+**Capability Overview**:
+- DeepSeek R1 supports web search through function calling (not built-in)
+- Compatible with OpenAI-style function calling patterns
+- Cost-effective: 90-95% cheaper than GPT-4o while supporting external tools
+- API-compatible with OpenAI SDK for easy integration
+
+**Implementation Options**:
+1. **Function Calling Pattern**: Define web search as an external function
+2. **Search API Integration**: Use SerpAPI, Bing Search API, or DuckDuckGo
+3. **Model Constants**: Update `supportsWebSearch: true` for DeepSeek R1 in `/src/lib/constants/models.ts`
+
+**Recommended Architecture**:
+```javascript
+// Example search function for DeepSeek R1
+const searchFunction = {
+  name: "web_search", 
+  description: "Search the internet for current information",
+  parameters: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search query" }
+    }
+  }
+}
+```
 
 ## Troubleshooting
 
 ### Common Issues
-- **Build failures**: Ensure all packages are built (`pnpm --recursive build`)
+- **Build failures**: Ensure all packages are built (`npm run build`)
 - **Import errors**: Check workspace dependencies in package.json files
 - **Supabase connection**: Verify `supabase start` is running locally
 - **Streaming issues**: Check network tab for SSE connection status
 - **Type errors**: Regenerate database types after schema changes
-- **PDF upload failures**: Check API keys for all providers (OpenAI, Anthropic, Google AI)
+- **PDF upload failures**: Check API keys for selected provider (provider-specific uploads)
 - **TypeScript errors**: If auto-generated types don't match schema, manually extend types with intersection (&) operator
 
 ### Performance Issues
@@ -232,3 +273,6 @@ The application supports PDF uploads to multiple LLM providers:
 - **Model compatibility**: Ensure using PDF-compatible models (GPT-4o-mini, Claude 3.5 Haiku, Gemini)
 - **API errors**: Check provider-specific error messages in console
 - **Base64 conversion issues**: Monitor Supabase storage access for Anthropic implementation
+- **Anthropic timeouts**: Upload includes retry logic (3 attempts with exponential backoff)
+- **Progress tracking**: Uses XMLHttpRequest for real progress vs simulated progress
+- **Provider name mismatch**: Ensure provider constants match API expectations ('google' not 'google-ai')

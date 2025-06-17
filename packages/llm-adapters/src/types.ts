@@ -36,6 +36,7 @@ export interface StreamOptions {
   userId?: string;
   conversationId?: string;
   model?: string;
+  webSearch?: boolean;
 }
 
 export interface CostOptimizedProvider {
@@ -56,7 +57,7 @@ export interface LLMProviderConfig {
   timeout?: number;
 }
 
-export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'deepseek';
+export type LLMProvider = 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek';
 
 export interface ModelInfo {
   provider: LLMProvider;

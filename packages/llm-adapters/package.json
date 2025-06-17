@@ -10,15 +10,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@orion-chat/shared-types": "file:../shared-types",
-    "openai": "^4.0.0",
     "@anthropic-ai/sdk": "^0.27.0",
+    "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.21.0",
-    "@supabase/supabase-js": "^2.0.0"
+    "@orion-chat/shared-types": "file:../shared-types",
+    "@supabase/supabase-js": "^2.0.0",
+    "openai": "^4.0.0"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20"
+    "@types/node": "^20",
+    "typescript": "^5"
   },
   "publishConfig": {
     "access": "public"

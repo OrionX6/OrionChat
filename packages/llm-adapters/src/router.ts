@@ -2,6 +2,7 @@ import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions, LLMProv
 import { OpenAIMiniProvider } from './providers/openai-mini';
 import { ClaudeHaikuProvider } from './providers/claude-haiku';
 import { GeminiFlashProvider } from './providers/gemini-flash';
+import { GeminiVertexProvider } from './providers/gemini-vertex';
 import { DeepSeekR1Provider } from './providers/deepseek-r1';
 
 export interface LLMRouterConfig {
@@ -9,6 +10,10 @@ export interface LLMRouterConfig {
   anthropicApiKey?: string;
   googleApiKey?: string;
   deepseekApiKey?: string;
+  // Vertex AI configuration
+  googleProjectId?: string;
+  googleCloudLocation?: string;
+  googleServiceAccountKeyPath?: string;
 }
 
 export class LLMRouter {
@@ -25,6 +30,15 @@ export class LLMRouter {
     
     if (config.googleApiKey) {
       this.providers.set('google', new GeminiFlashProvider(config.googleApiKey));
+    }
+    
+    // Vertex AI provider (requires project ID)
+    if (config.googleProjectId) {
+      this.providers.set('google-vertex', new GeminiVertexProvider(
+        config.googleProjectId, 
+        config.googleCloudLocation || 'us-central1',
+        config.googleServiceAccountKeyPath
+      ));
     }
     
     if (config.deepseekApiKey) {

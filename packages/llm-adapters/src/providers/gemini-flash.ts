@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, SchemaType } from '@google/generative-ai';
 import { CostOptimizedProvider, ChatMessage, StreamChunk, StreamOptions, MultimodalContent } from '../types';
 
 export class GeminiFlashProvider implements CostOptimizedProvider {
@@ -14,6 +14,7 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
   constructor(apiKey: string) {
     this.client = new GoogleGenerativeAI(apiKey);
   }
+
 
   private convertToGeminiParts(content: string | MultimodalContent[]): any[] {
     if (Array.isArray(content)) {
@@ -48,7 +49,15 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
       const modelToUse = options.model || 'gemini-2.5-flash-preview-05-20';
       const maxOutputTokens = Math.min(options.maxTokens || 65536, 65536);
       
-      console.log(`🔥 GEMINI SETUP: Using model ${modelToUse} with maxOutputTokens: ${maxOutputTokens}`);
+      console.log(`🔥 GEMINI SETUP: Using model ${modelToUse} with maxOutputTokens: ${maxOutputTokens}, webSearch: ${options.webSearch}`);
+      
+      // Configure tools for web search if enabled
+      // Try native Google Search grounding first
+      const tools = options.webSearch ? [{ googleSearchRetrieval: {} }] : undefined;
+      
+      if (options.webSearch) {
+        console.log('🌐 GEMINI: Attempting to enable native Google Search grounding...');
+      }
       
       const model = this.client.getGenerativeModel({ 
         model: modelToUse,
@@ -78,6 +87,7 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
             threshold: HarmBlockThreshold.BLOCK_NONE,
           },
         ],
+        ...(tools && { tools }),
       });
       
       // Convert messages to Gemini format
@@ -128,6 +138,16 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
       // Final chunk with usage info and finish reason
       const response = await result.response;
       const finishReason = response.candidates?.[0]?.finishReason;
+      const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+      
+      // Log grounding information if web search was used
+      if (options.webSearch && groundingMetadata) {
+        console.log('🌐 GEMINI WEB SEARCH GROUNDING:', {
+          searchQueries: groundingMetadata.webSearchQueries,
+          groundingSources: groundingMetadata.groundingChuncks?.length || 0,
+          searchEntryPoint: groundingMetadata.searchEntryPoint?.renderedContent ? 'Available' : 'None'
+        });
+      }
       
       // Log detailed information about generation completion
       console.log(`Gemini generation completed:`, {
@@ -135,7 +155,8 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
         promptTokens: response.usageMetadata?.promptTokenCount,
         outputTokens: response.usageMetadata?.candidatesTokenCount,
         totalTokens: response.usageMetadata?.totalTokenCount,
-        maxOutputTokensUsed: response.usageMetadata?.candidatesTokenCount
+        maxOutputTokensUsed: response.usageMetadata?.candidatesTokenCount,
+        webSearchUsed: !!groundingMetadata
       });
       
       // Log if generation was cut short
@@ -153,7 +174,93 @@ export class GeminiFlashProvider implements CostOptimizedProvider {
         } : undefined
       };
     } catch (error) {
-      throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if this is a search grounding error and retry without search
+      if (options.webSearch && errorMessage.includes('Search Grounding is not supported')) {
+        console.warn('⚠️ GEMINI: Native search grounding not available with current API key, retrying without search...');
+        
+        // Retry without search grounding
+        try {
+          const fallbackModel = this.client.getGenerativeModel({ 
+            model: options.model || 'gemini-2.5-flash-preview-05-20',
+            generationConfig: {
+              maxOutputTokens: Math.min(options.maxTokens || 65536, 65536),
+              temperature: options.temperature || 0.7,
+              candidateCount: 1,
+              stopSequences: [],
+              topK: undefined,
+              topP: undefined,
+            },
+            safetySettings: [
+              {
+                category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+              },
+              {
+                category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold: HarmBlockThreshold.BLOCK_NONE,
+              },
+            ],
+            // No tools - fallback without search
+          });
+          
+          const history = messages.slice(0, -1).map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: this.convertToGeminiParts(msg.content)
+          }));
+          
+          const lastMessage = messages[messages.length - 1];
+          const lastMessageParts = this.convertToGeminiParts(lastMessage.content);
+          
+          const fallbackChat = fallbackModel.startChat({ history });
+          const fallbackResult = await fallbackChat.sendMessageStream(lastMessageParts);
+          
+          // Note to user about search limitation
+          yield {
+            content: '⚠️ **Note:** Web search grounding is not available with your current Gemini API configuration. To enable native search like in AI Studio, you may need:\n\n1. **Vertex AI API access** (enterprise/paid tier)\n2. **Search grounding allowlist access** from Google\n3. **Different authentication method** (service account vs API key)\n\nResponding without web search:\n\n',
+            done: false
+          };
+          
+          let chunkCount = 0;
+          for await (const chunk of fallbackResult.stream) {
+            const text = chunk.text();
+            if (text) {
+              chunkCount++;
+              yield {
+                content: text,
+                done: false
+              };
+            }
+          }
+          
+          const fallbackResponse = await fallbackResult.response;
+          yield {
+            content: '',
+            done: true,
+            usage: fallbackResponse.usageMetadata ? {
+              prompt_tokens: fallbackResponse.usageMetadata.promptTokenCount || 0,
+              completion_tokens: fallbackResponse.usageMetadata.candidatesTokenCount || 0,
+              total_tokens: fallbackResponse.usageMetadata.totalTokenCount || 0
+            } : undefined
+          };
+          
+          return;
+        } catch (fallbackError) {
+          console.error('❌ GEMINI: Fallback also failed:', fallbackError);
+          throw new Error(`Gemini API error: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+        }
+      }
+      
+      throw new Error(`Gemini API error: ${errorMessage}`);
     }
   }
   

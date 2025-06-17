@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { messages, conversationId, provider, model, attachments } = await request.json();
+    const { messages, conversationId, provider, model, attachments, webSearch } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response('Messages are required', { status: 400 });
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Verify conversation belongs to user (optimized query)
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('max_tokens, temperature, message_count, total_tokens_used')
+      .select('max_tokens, temperature, message_count, total_tokens_used, is_web_search_enabled')
       .eq('id', conversationId)
       .eq('user_id', user.id)
       .single();
@@ -175,6 +175,10 @@ export async function POST(request: NextRequest) {
       anthropicApiKey: process.env.ANTHROPIC_API_KEY,
       googleApiKey: process.env.GOOGLE_AI_API_KEY,
       deepseekApiKey: process.env.DEEPSEEK_API_KEY,
+      // Vertex AI configuration
+      googleProjectId: process.env.GOOGLE_CLOUD_PROJECT,
+      googleCloudLocation: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1',
+      googleServiceAccountKeyPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     });
 
     // Process attachments for the latest user message if they exist
@@ -316,13 +320,14 @@ export async function POST(request: NextRequest) {
           // Stream the response from the LLM
           for await (const chunk of router.stream({
             messages: chatMessages,
-            provider: provider as 'openai' | 'anthropic' | 'google' | 'deepseek',
+            provider: provider as 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek',
             model,
             userId: user.id,
             conversationId,
             options: {
               maxTokens: maxTokensUsed, // Use high default to accommodate full model capabilities
               temperature: conversation.temperature || 0.7,
+              webSearch: webSearch && conversation.is_web_search_enabled && (provider === 'google' || provider === 'google-vertex' || provider === 'deepseek'),
             }
           })) {
             fullResponse += chunk.content;

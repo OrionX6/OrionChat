@@ -8,9 +8,11 @@ import { Send, Paperclip, Search, X, FileText, Image, Loader2 } from "lucide-rea
 import { ModelSelector } from "./ModelSelector";
 import type { Database } from "@/lib/types/database";
 import type { ModelProvider } from "@/lib/constants/models";
-import { DEFAULT_MODEL } from "@/lib/constants/models";
+import { DEFAULT_MODEL, AVAILABLE_MODELS } from "@/lib/constants/models";
 
-type Conversation = Database['public']['Tables']['conversations']['Row'];
+type Conversation = Database['public']['Tables']['conversations']['Row'] & {
+  is_web_search_enabled?: boolean | null;
+};
 
 interface FileAttachment {
   id: string;
@@ -23,7 +25,7 @@ interface FileAttachment {
 }
 
 interface ChatInputProps {
-  onSend: (message: string, attachments?: FileAttachment[]) => void;
+  onSend: (message: string, attachments?: FileAttachment[], webSearch?: boolean) => void;
   disabled?: boolean;
   onTypingChange?: (isTyping: boolean) => void;
   currentConversation?: Conversation | null;
@@ -35,6 +37,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [uploadAbortControllers, setUploadAbortControllers] = useState<Map<string, AbortController>>(new Map());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -302,9 +305,10 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || attachments.filter(f => !f.uploading).length > 0) && !disabled && !uploading && !attachments.some(f => f.uploading)) {
-      onSend(message.trim(), attachments);
+      onSend(message.trim(), attachments, webSearchEnabled);
       setMessage("");
       setAttachments([]);
+      setWebSearchEnabled(false); // Reset web search after sending
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -322,6 +326,13 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
       handleSubmit(e);
     }
   };
+
+  // Check if current model supports web search
+  const currentModel = AVAILABLE_MODELS.find(m => 
+    m.provider === (currentConversation?.model_provider || DEFAULT_MODEL.provider) && 
+    m.name === (currentConversation?.model_name || DEFAULT_MODEL.name)
+  );
+  const supportsWebSearch = currentModel?.supportsWebSearch && currentConversation?.is_web_search_enabled;
 
   return (
     <div ref={containerRef} className="relative">
@@ -434,14 +445,23 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                 )}
 
                 {/* Search button */}
-                <button
-                  type="button"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 px-3 text-muted-foreground hover:text-foreground")}
-                  disabled={disabled}
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Search
-                </button>
+                {supportsWebSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                    className={cn(
+                      buttonVariants({ variant: webSearchEnabled ? "default" : "ghost", size: "sm" }), 
+                      "h-8 px-3 transition-colors",
+                      webSearchEnabled 
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    disabled={disabled}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Search
+                  </button>
+                )}
 
                 {/* Attachment button */}
                 <button

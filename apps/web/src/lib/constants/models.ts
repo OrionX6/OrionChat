@@ -34,7 +34,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
-    supportsWebSearch: false,
+    supportsWebSearch: true,
     supportsFileUpload: true,
     supportsReasoning: false,
     icon: '⚡',
@@ -98,6 +98,44 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     icon: '🧠',
   },
   
+  // Google Vertex AI Models (Enterprise with Native Search Grounding)
+  {
+    id: 'gemini-2.0-flash-exp-vertex',
+    name: 'gemini-2.0-flash-exp',
+    provider: 'google-vertex',
+    displayName: 'Gemini 2.0 Flash (Vertex AI)',
+    description: 'Google\'s model with native search grounding via Vertex AI',
+    maxTokens: 1000000,
+    costPer1KTokens: {
+      input: 0.10,
+      output: 0.40,
+    },
+    supportsFunctions: true,
+    supportsVision: true,
+    supportsWebSearch: true, // Native search grounding via Vertex AI
+    supportsFileUpload: true,
+    supportsReasoning: false,
+    icon: '🌟',
+  },
+  {
+    id: 'gemini-2.5-flash-vertex',
+    name: 'gemini-2.5-flash-preview-05-20',
+    provider: 'google-vertex',
+    displayName: 'Gemini 2.5 Flash (Vertex AI)',
+    description: 'Google\'s enterprise model with native search grounding and thinking capabilities',
+    maxTokens: 1000000,
+    costPer1KTokens: {
+      input: 0.15,
+      output: 0.60,
+    },
+    supportsFunctions: true,
+    supportsVision: true,
+    supportsWebSearch: true, // Native search grounding via Vertex AI
+    supportsFileUpload: true,
+    supportsReasoning: true,
+    icon: '🧠',
+  },
+  
   // DeepSeek Models
   {
     id: 'deepseek-r1',
@@ -123,6 +161,7 @@ export const MODELS_BY_PROVIDER: Record<ModelProvider, ModelInfo[]> = {
   openai: AVAILABLE_MODELS.filter(m => m.provider === 'openai'),
   anthropic: AVAILABLE_MODELS.filter(m => m.provider === 'anthropic'),
   google: AVAILABLE_MODELS.filter(m => m.provider === 'google'),
+  'google-vertex': AVAILABLE_MODELS.filter(m => m.provider === 'google-vertex'),
   deepseek: AVAILABLE_MODELS.filter(m => m.provider === 'deepseek'),
 };
 

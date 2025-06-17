@@ -518,7 +518,7 @@ export function ChatWindow() {
     }
   };
 
-  const handleSendMessage = async (content: string, attachments?: FileAttachment[]) => {
+  const handleSendMessage = async (content: string, attachments?: FileAttachment[], webSearch?: boolean) => {
     if (!user) return;
 
     // Create conversation if none exists, using the selected model
@@ -589,7 +589,8 @@ export function ChatWindow() {
           conversationId: conversation.id,
           provider: conversation.model_provider,
           model: conversation.model_name,
-          attachments: attachments || []
+          attachments: attachments || [],
+          webSearch: webSearch || false
         }),
       });
 
