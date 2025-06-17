@@ -13,34 +13,45 @@ export class GeminiVertexProvider implements CostOptimizedProvider {
   private vertexAI: VertexAI;
   
   constructor(projectId: string, location: string = 'us-central1', keyFilePath?: string) {
-    // Set up authentication options
+    // Set up authentication options for serverless environments
     const authOptions: any = {};
     
-    if (keyFilePath) {
-      // Use explicit key file path
+    // First, try to use GOOGLE_APPLICATION_CREDENTIALS as a JSON string (Vercel-friendly)
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      try {
+        // Parse the credentials JSON string
+        const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        authOptions.credentials = credentials;
+        console.log('🔐 Using GOOGLE_APPLICATION_CREDENTIALS JSON for Vertex AI authentication');
+      } catch (error) {
+        console.log('⚠️ GOOGLE_APPLICATION_CREDENTIALS is not valid JSON, trying as file path...');
+        // Fallback to treating it as a file path (local development)
+        authOptions.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      }
+    } else if (keyFilePath) {
+      // Use explicit key file path (local development)
       authOptions.keyFilename = keyFilePath;
       console.log('🔐 Using explicit service account key file for Vertex AI authentication');
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      // Use environment variable
-      console.log('🔐 Using GOOGLE_APPLICATION_CREDENTIALS for Vertex AI authentication');
     } else {
-      // Try to find key file in .google folder
+      // Try to find key file in .google folder (local development fallback)
       const defaultKeyPath = path.join(__dirname, '.google', 'service-account-key.json');
       try {
         authOptions.keyFilename = defaultKeyPath;
         console.log('🔐 Using default key file path for Vertex AI authentication:', defaultKeyPath);
       } catch (error) {
-        console.warn('⚠️ No authentication method found. Please set GOOGLE_APPLICATION_CREDENTIALS or provide keyFilePath');
+        console.warn('⚠️ No authentication method found. Please set GOOGLE_APPLICATION_CREDENTIALS as JSON or provide keyFilePath');
       }
     }
     
+    // Initialize Vertex AI with explicit auth options for serverless environments
     this.vertexAI = new VertexAI({
       project: projectId,
       location: location,
-      googleAuthOptions: Object.keys(authOptions).length > 0 ? authOptions : undefined,
+      googleAuthOptions: authOptions,
     });
     
     console.log(`🌐 Vertex AI initialized for project: ${projectId}, location: ${location}`);
+    console.log('🔐 Auth method:', authOptions.credentials ? 'JSON credentials' : authOptions.keyFilename ? 'Key file' : 'Default auth');
   }
 
   private convertToVertexParts(content: string | MultimodalContent[]): any[] {
