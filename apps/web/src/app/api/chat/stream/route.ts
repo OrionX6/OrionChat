@@ -315,19 +315,29 @@ export async function POST(request: NextRequest) {
 
           const modelMaxTokens = getModelMaxTokens(provider);
           const maxTokensUsed = Math.min(conversation.max_tokens || modelMaxTokens, modelMaxTokens);
-          console.log(`🚀 Starting generation for ${provider}/${model} with maxTokens: ${maxTokensUsed} (model limit: ${modelMaxTokens})`);
+          // Smart provider routing: Use Vertex AI for Gemini models when search is enabled
+          let actualProvider = provider;
+          const isGeminiModel = provider === 'google' && (model === 'gemini-2.0-flash-exp' || model === 'gemini-2.5-flash-preview-05-20');
+          const shouldUseVertexAI = isGeminiModel && webSearch && conversation.is_web_search_enabled;
+          
+          if (shouldUseVertexAI) {
+            actualProvider = 'google-vertex';
+            console.log(`🔄 Smart routing: Using Vertex AI for ${model} with search enabled`);
+          }
+          
+          console.log(`🚀 Starting generation for ${actualProvider}/${model} with maxTokens: ${maxTokensUsed} (model limit: ${modelMaxTokens})`);
 
           // Stream the response from the LLM
           for await (const chunk of router.stream({
             messages: chatMessages,
-            provider: provider as 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek',
+            provider: actualProvider as 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek',
             model,
             userId: user.id,
             conversationId,
             options: {
               maxTokens: maxTokensUsed, // Use high default to accommodate full model capabilities
               temperature: conversation.temperature || 0.7,
-              webSearch: webSearch && conversation.is_web_search_enabled && (provider === 'google' || provider === 'google-vertex' || provider === 'deepseek'),
+              webSearch: webSearch && conversation.is_web_search_enabled && (actualProvider === 'google-vertex' || actualProvider === 'deepseek'),
             }
           })) {
             fullResponse += chunk.content;
@@ -355,7 +365,7 @@ export async function POST(request: NextRequest) {
                     user_id: user.id,
                     role: 'assistant',
                     content: fullResponse,
-                    provider: provider,
+                    provider: provider, // Save original provider selection for UI consistency
                     model: model,
                     tokens_used: tokenCount,
                     response_time_ms: responseTime,

@@ -308,7 +308,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
       onSend(message.trim(), attachments, webSearchEnabled);
       setMessage("");
       setAttachments([]);
-      setWebSearchEnabled(false); // Reset web search after sending
+      // Keep web search enabled until user manually turns it off
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
