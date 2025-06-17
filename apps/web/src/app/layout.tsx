@@ -1,16 +1,34 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono, Inter, Roboto, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { FontProvider } from "@/contexts/FontContext";
+import { MessageLimitProvider } from "@/contexts/MessageLimitContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700"],
+});
+
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
   subsets: ["latin"],
 });
 
@@ -27,12 +45,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${jetbrainsMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} antialiased`}
       >
-        <ThemeProvider defaultTheme="dark">
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+        <ThemeProvider defaultBaseTheme="dark" defaultColorTheme="default">
+          <FontProvider>
+            <AuthProvider>
+              <MessageLimitProvider>
+                {children}
+              </MessageLimitProvider>
+            </AuthProvider>
+          </FontProvider>
         </ThemeProvider>
       </body>
     </html>

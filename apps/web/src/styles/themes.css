@@ -1,0 +1,275 @@
+/* Default Theme */
+.theme-default.light {
+  --background: rgb(248 250 252);
+  --foreground: rgb(30 41 59);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(30 41 59);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(30 41 59);
+  --primary: rgb(30 64 175);
+  --primary-foreground: rgb(248 250 252);
+  --secondary: rgb(241 245 249);
+  --secondary-foreground: rgb(30 41 59);
+  --muted: rgb(241 245 249);
+  --muted-foreground: rgb(100 116 139);
+  --accent: rgb(226 232 240);
+  --accent-foreground: rgb(30 41 59);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(248 250 252);
+  --border: rgb(226 232 240);
+  --input: rgb(226 232 240);
+  --ring: rgb(30 64 175);
+  --radius: 0.5rem;
+}
+
+.theme-default.dark {
+  --background: rgb(2 6 23);
+  --foreground: rgb(248 250 252);
+  --card: rgb(15 23 42);
+  --card-foreground: rgb(248 250 252);
+  --popover: rgb(2 6 23);
+  --popover-foreground: rgb(248 250 252);
+  --primary: rgb(30 64 175);
+  --primary-foreground: rgb(248 250 252);
+  --secondary: rgb(15 23 42);
+  --secondary-foreground: rgb(248 250 252);
+  --muted: rgb(15 23 42);
+  --muted-foreground: rgb(148 163 184);
+  --accent: rgb(51 65 85);
+  --accent-foreground: rgb(248 250 252);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(248 250 252);
+  --border: rgb(30 41 59);
+  --input: rgb(30 41 59);
+  --ring: rgb(59 130 246);
+}
+
+/* Ocean Theme */
+.theme-ocean.light {
+  --background: rgb(240 249 255);
+  --foreground: rgb(12 74 110);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(12 74 110);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(12 74 110);
+  --primary: rgb(14 165 233);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(236 254 255);
+  --secondary-foreground: rgb(12 74 110);
+  --muted: rgb(236 254 255);
+  --muted-foreground: rgb(71 85 105);
+  --accent: rgb(186 230 253);
+  --accent-foreground: rgb(12 74 110);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(186 230 253);
+  --input: rgb(186 230 253);
+  --ring: rgb(14 165 233);
+  --radius: 0.5rem;
+}
+
+.theme-ocean.dark {
+  --background: rgb(10 18 25);
+  --foreground: rgb(245 250 252);
+  --card: rgb(18 30 40);
+  --card-foreground: rgb(245 250 252);
+  --popover: rgb(10 18 25);
+  --popover-foreground: rgb(245 250 252);
+  --primary: rgb(56 189 248);
+  --primary-foreground: rgb(10 18 25);
+  --secondary: rgb(18 30 40);
+  --secondary-foreground: rgb(245 250 252);
+  --muted: rgb(18 30 40);
+  --muted-foreground: rgb(156 163 175);
+  --accent: rgb(28 45 60);
+  --accent-foreground: rgb(245 250 252);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(28 45 60);
+  --input: rgb(28 45 60);
+  --ring: rgb(56 189 248);
+}
+
+/* Forest Theme */
+.theme-forest.light {
+  --background: rgb(240 253 244);
+  --foreground: rgb(20 83 45);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(20 83 45);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(20 83 45);
+  --primary: rgb(34 197 94);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(220 252 231);
+  --secondary-foreground: rgb(20 83 45);
+  --muted: rgb(220 252 231);
+  --muted-foreground: rgb(75 85 99);
+  --accent: rgb(187 247 208);
+  --accent-foreground: rgb(20 83 45);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(187 247 208);
+  --input: rgb(187 247 208);
+  --ring: rgb(34 197 94);
+  --radius: 0.5rem;
+}
+
+.theme-forest.dark {
+  --background: rgb(12 20 15);
+  --foreground: rgb(248 252 249);
+  --card: rgb(20 30 22);
+  --card-foreground: rgb(248 252 249);
+  --popover: rgb(12 20 15);
+  --popover-foreground: rgb(248 252 249);
+  --primary: rgb(52 211 153);
+  --primary-foreground: rgb(12 20 15);
+  --secondary: rgb(20 30 22);
+  --secondary-foreground: rgb(248 252 249);
+  --muted: rgb(20 30 22);
+  --muted-foreground: rgb(156 163 175);
+  --accent: rgb(30 45 35);
+  --accent-foreground: rgb(248 252 249);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(30 45 35);
+  --input: rgb(30 45 35);
+  --ring: rgb(52 211 153);
+}
+
+/* Sunset Theme */
+.theme-sunset.light {
+  --background: rgb(255 247 237);
+  --foreground: rgb(154 52 18);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(154 52 18);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(154 52 18);
+  --primary: rgb(249 115 22);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(254 215 170);
+  --secondary-foreground: rgb(154 52 18);
+  --muted: rgb(254 215 170);
+  --muted-foreground: rgb(120 113 108);
+  --accent: rgb(253 186 116);
+  --accent-foreground: rgb(154 52 18);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(253 186 116);
+  --input: rgb(253 186 116);
+  --ring: rgb(249 115 22);
+  --radius: 0.5rem;
+}
+
+.theme-sunset.dark {
+  --background: rgb(25 15 10);
+  --foreground: rgb(252 248 245);
+  --card: rgb(40 25 18);
+  --card-foreground: rgb(252 248 245);
+  --popover: rgb(25 15 10);
+  --popover-foreground: rgb(252 248 245);
+  --primary: rgb(251 146 60);
+  --primary-foreground: rgb(25 15 10);
+  --secondary: rgb(40 25 18);
+  --secondary-foreground: rgb(252 248 245);
+  --muted: rgb(40 25 18);
+  --muted-foreground: rgb(168 162 158);
+  --accent: rgb(60 40 28);
+  --accent-foreground: rgb(252 248 245);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(60 40 28);
+  --input: rgb(60 40 28);
+  --ring: rgb(251 146 60);
+}
+
+/* Lavender Theme */
+.theme-lavender.light {
+  --background: rgb(250 245 255);
+  --foreground: rgb(88 28 135);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(88 28 135);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(88 28 135);
+  --primary: rgb(147 51 234);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(243 232 255);
+  --secondary-foreground: rgb(88 28 135);
+  --muted: rgb(243 232 255);
+  --muted-foreground: rgb(107 114 128);
+  --accent: rgb(221 214 254);
+  --accent-foreground: rgb(88 28 135);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(221 214 254);
+  --input: rgb(221 214 254);
+  --ring: rgb(147 51 234);
+  --radius: 0.5rem;
+}
+
+.theme-lavender.dark {
+  --background: rgb(18 12 25);
+  --foreground: rgb(250 248 252);
+  --card: rgb(30 20 40);
+  --card-foreground: rgb(250 248 252);
+  --popover: rgb(18 12 25);
+  --popover-foreground: rgb(250 248 252);
+  --primary: rgb(168 85 247);
+  --primary-foreground: rgb(18 12 25);
+  --secondary: rgb(30 20 40);
+  --secondary-foreground: rgb(250 248 252);
+  --muted: rgb(30 20 40);
+  --muted-foreground: rgb(163 156 175);
+  --accent: rgb(45 35 60);
+  --accent-foreground: rgb(250 248 252);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(45 35 60);
+  --input: rgb(45 35 60);
+  --ring: rgb(168 85 247);
+}
+
+/* Rose Theme */
+.theme-rose.light {
+  --background: rgb(255 241 242);
+  --foreground: rgb(159 18 57);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(159 18 57);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(159 18 57);
+  --primary: rgb(244 63 94);
+  --primary-foreground: rgb(255 255 255);
+  --secondary: rgb(254 205 211);
+  --secondary-foreground: rgb(159 18 57);
+  --muted: rgb(254 205 211);
+  --muted-foreground: rgb(120 113 108);
+  --accent: rgb(251 113 133);
+  --accent-foreground: rgb(159 18 57);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(251 113 133);
+  --input: rgb(251 113 133);
+  --ring: rgb(244 63 94);
+  --radius: 0.5rem;
+}
+
+.theme-rose.dark {
+  --background: rgb(25 12 18);
+  --foreground: rgb(252 248 250);
+  --card: rgb(40 20 28);
+  --card-foreground: rgb(252 248 250);
+  --popover: rgb(25 12 18);
+  --popover-foreground: rgb(252 248 250);
+  --primary: rgb(251 113 133);
+  --primary-foreground: rgb(25 12 18);
+  --secondary: rgb(40 20 28);
+  --secondary-foreground: rgb(252 248 250);
+  --muted: rgb(40 20 28);
+  --muted-foreground: rgb(168 162 158);
+  --accent: rgb(60 30 42);
+  --accent-foreground: rgb(252 248 250);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(255 255 255);
+  --border: rgb(60 30 42);
+  --input: rgb(60 30 42);
+  --ring: rgb(251 113 133);
+}

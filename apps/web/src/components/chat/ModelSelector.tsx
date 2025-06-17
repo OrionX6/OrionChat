@@ -31,7 +31,7 @@ interface ModelSelectorProps {
 export function ModelSelector({ selectedModel, onModelChange, disabled = false, compact = false }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   
-  const currentModel = AVAILABLE_MODELS.find(m => m.id === selectedModel);
+  const currentModel = AVAILABLE_MODELS.find(m => m.name === selectedModel);
   
   const handleModelSelect = (model: ModelInfo) => {
     onModelChange(model.provider, model.name);
@@ -63,7 +63,7 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
   };
 
   const renderModelItem = (model: ModelInfo) => {
-    const isSelected = model.id === selectedModel;
+    const isSelected = model.name === selectedModel;
     const capabilities = [];
     
     if (model.supportsVision) capabilities.push('vision');

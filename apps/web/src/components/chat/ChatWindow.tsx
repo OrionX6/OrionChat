@@ -4,10 +4,12 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingMessageBubble } from "./StreamingMessageBubble";
+import { CollapsibleThinking } from "./CollapsibleThinking";
 import { Sidebar } from "./Sidebar";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useMessageLimit } from "@/contexts/MessageLimitContext";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_MODEL, ModelProvider } from "@/lib/constants/models";
 import type { Database } from "@/lib/types/database";
@@ -35,6 +37,7 @@ type Message = Database['public']['Tables']['messages']['Row'] & {
   document_context?: any | null;
   metadata?: any | null;
   embedding?: string | null;
+  thinking_content?: string; // Chain of thought for reasoning models
 };
 
 interface FileAttachment {
@@ -53,6 +56,9 @@ export function ChatWindow() {
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [streamingMessage, setStreamingMessage] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [currentThinkingContent, setCurrentThinkingContent] = useState<string>('');
+  const [isThinking, setIsThinking] = useState(false);
+  const thinkingContentRef = useRef<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [inputHeight, setInputHeight] = useState(128); // Default spacer height
@@ -61,6 +67,7 @@ export function ChatWindow() {
     name: DEFAULT_MODEL.name
   });
   const { user } = useAuth();
+  const { incrementUsage } = useMessageLimit();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
@@ -423,6 +430,9 @@ export function ChatWindow() {
       // Start streaming immediately
       setIsStreaming(true);
       setStreamingMessage('');
+      setCurrentThinkingContent('');
+      thinkingContentRef.current = '';
+      setIsThinking(false);
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -462,14 +472,29 @@ export function ChatWindow() {
               try {
                 const data = JSON.parse(line.slice(6));
                 
+                // Handle thinking content for reasoning models
+                if (data.thinking) {
+                  thinkingContentRef.current += data.thinking;
+                  setCurrentThinkingContent(thinkingContentRef.current);
+                  setIsThinking(true);
+                } else if (data.isThinking) {
+                  setIsThinking(true);
+                }
+
                 if (data.content) {
                   accumulatedContent += data.content;
                   setStreamingMessage(accumulatedContent);
+                  // If we start getting content, we're done thinking
+                  if (isThinking) {
+                    setIsThinking(false);
+                  }
                 }
 
                 if (data.done) {
                   // Generate client-side ID for immediate display
                   const tempId = 'ai-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+                  
+                  const finalThinkingContent = thinkingContentRef.current;
                   
                   const aiMessage: Message = {
                     id: tempId,
@@ -488,6 +513,7 @@ export function ChatWindow() {
                     embedding: null,
                     document_context: null,
                     metadata: null,
+                    thinking_content: finalThinkingContent || undefined,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   };
@@ -496,6 +522,7 @@ export function ChatWindow() {
                   setMessages(prev => [...prev, aiMessage]);
                   setIsStreaming(false);
                   setStreamingMessage('');
+                  setIsThinking(false);
                   
                   return; // Exit the streaming loop
                 }
@@ -513,6 +540,8 @@ export function ChatWindow() {
       console.error('Error retrying message:', error);
       setIsStreaming(false);
       setStreamingMessage('');
+      setIsThinking(false);
+      setCurrentThinkingContent('');
     } finally {
       setLoading(false);
     }
@@ -561,6 +590,9 @@ export function ChatWindow() {
       // Add user message to UI
       setMessages(prev => [...prev, userMessage]);
 
+      // Increment message usage count
+      incrementUsage();
+
       // Update title if this is the first message (conversation title is still "New Conversation")
       if (conversation.title === 'New Conversation') {
         const newTitle = generateConversationTitle(content);
@@ -577,6 +609,9 @@ export function ChatWindow() {
       // Start streaming immediately with optimized settings
       setIsStreaming(true);
       setStreamingMessage('');
+      setCurrentThinkingContent(''); // Reset thinking content for new message
+      thinkingContentRef.current = ''; // Reset ref as well
+      setIsThinking(false);
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -626,15 +661,28 @@ export function ChatWindow() {
                   throw new Error(data.error);
                 }
 
+                // Handle thinking content for reasoning models
+                if (data.thinking) {
+                  thinkingContentRef.current += data.thinking;
+                  setCurrentThinkingContent(thinkingContentRef.current);
+                  setIsThinking(true);
+                }
+
                 if (data.content) {
                   accumulatedContent += data.content;
                   // Update streaming message immediately without debouncing
                   setStreamingMessage(accumulatedContent);
+                  // If we start getting content, we're done thinking
+                  if (isThinking) {
+                    setIsThinking(false);
+                  }
                 }
 
                 if (data.done) {
                   // Generate client-side ID for immediate display
                   const tempId = 'ai-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+                  
+                  const finalThinkingContent = thinkingContentRef.current;
                   
                   const aiMessage: Message = {
                     id: tempId,
@@ -653,14 +701,17 @@ export function ChatWindow() {
                     embedding: null,
                     document_context: null,
                     metadata: null,
+                    thinking_content: finalThinkingContent || undefined,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   };
 
-                  // Add AI message and clear streaming in one atomic update
+                  // Add AI message and clear streaming states
                   setMessages(prev => [...prev, aiMessage]);
                   setIsStreaming(false);
                   setStreamingMessage('');
+                  setIsThinking(false);
+                  // DON'T clear currentThinkingContent here - let it persist for the component
                   
                   return; // Exit the streaming loop
                 }
@@ -678,6 +729,8 @@ export function ChatWindow() {
       console.error('Error sending message:', error);
       setIsStreaming(false);
       setStreamingMessage('');
+      setIsThinking(false);
+      setCurrentThinkingContent('');
     } finally {
       setLoading(false);
     }
@@ -722,6 +775,15 @@ export function ChatWindow() {
                     />
                   ))}
 
+                  {/* Show current thinking for the streaming message */}
+                  {(isThinking || (currentThinkingContent && isStreaming)) && (
+                    <CollapsibleThinking 
+                      thinkingContent={currentThinkingContent}
+                      isThinking={isThinking}
+                      isCompleted={!isThinking && !isStreaming}
+                    />
+                  )}
+
                   {isStreaming && (
                     <StreamingMessageBubble content={streamingMessage} />
                   )}
@@ -762,6 +824,7 @@ export function ChatWindow() {
                 onTypingChange={handleTypingChange}
                 currentConversation={currentConversation}
                 onModelChange={handleModelChange}
+                selectedModel={selectedModel}
                 onHeightChange={handleInputHeightChange}
               />
             </div>

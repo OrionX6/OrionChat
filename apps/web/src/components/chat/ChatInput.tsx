@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Paperclip, Search, X, FileText, Image, Loader2 } from "lucide-react";
 import { ModelSelector } from "./ModelSelector";
+import { useMessageLimit } from "@/contexts/MessageLimitContext";
 import type { Database } from "@/lib/types/database";
 import type { ModelProvider } from "@/lib/constants/models";
 import { DEFAULT_MODEL, AVAILABLE_MODELS } from "@/lib/constants/models";
@@ -30,10 +31,12 @@ interface ChatInputProps {
   onTypingChange?: (isTyping: boolean) => void;
   currentConversation?: Conversation | null;
   onModelChange?: (provider: ModelProvider, modelName: string) => void;
+  selectedModel?: {provider: ModelProvider, name: string};
   onHeightChange?: (height: number) => void;
 }
 
-export function ChatInput({ onSend, disabled = false, onTypingChange, currentConversation, onModelChange, onHeightChange }: ChatInputProps) {
+export function ChatInput({ onSend, disabled = false, onTypingChange, currentConversation, onModelChange, selectedModel, onHeightChange }: ChatInputProps) {
+  const { canSendMessage, usage } = useMessageLimit();
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -42,6 +45,8 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isAtMessageLimit = !canSendMessage();
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
@@ -309,6 +314,12 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check message limit first
+    if (isAtMessageLimit) {
+      return;
+    }
+
     if ((message.trim() || attachments.filter(f => !f.uploading).length > 0) && !disabled && !uploading && !attachments.some(f => f.uploading)) {
       onSend(message.trim(), attachments, webSearchEnabled);
       setMessage("");
@@ -333,9 +344,11 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
   };
 
   // Check if current model supports web search
+  const currentModelProvider = currentConversation?.model_provider || selectedModel?.provider || DEFAULT_MODEL.provider;
+  const currentModelName = currentConversation?.model_name || selectedModel?.name || DEFAULT_MODEL.name;
   const currentModel = AVAILABLE_MODELS.find(m => 
-    m.provider === (currentConversation?.model_provider || DEFAULT_MODEL.provider) && 
-    m.name === (currentConversation?.model_name || DEFAULT_MODEL.name)
+    m.provider === currentModelProvider && 
+    m.name === currentModelName
   );
   const supportsWebSearch = currentModel?.supportsWebSearch && currentConversation?.is_web_search_enabled;
 
@@ -428,11 +441,11 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                 value={message}
                 onChange={handleMessageChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message here..."
+                placeholder={isAtMessageLimit ? `Message limit reached (${usage.used}/${usage.limit}). Resets in ${usage.daysUntilReset} days.` : "Type your message here..."}
                 className="w-full min-h-[24px] resize-none border-0 p-0 text-base bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60 overflow-y-auto"
                 style={{ lineHeight: '24px' }}
                 rows={1}
-                disabled={disabled}
+                disabled={disabled || isAtMessageLimit}
               />
             </div>
 
@@ -442,7 +455,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                 {/* Model selector */}
                 {onModelChange && (
                   <ModelSelector
-                    selectedModel={currentConversation?.model_name || DEFAULT_MODEL.name}
+                    selectedModel={currentModelName}
                     onModelChange={onModelChange}
                     disabled={disabled}
                     compact={true}
@@ -476,7 +489,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                     buttonVariants({ variant: "ghost", size: "sm" }),
                     "h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                   )}
-                  disabled={disabled}
+                  disabled={disabled || isAtMessageLimit}
                 >
                   {uploading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -489,7 +502,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               {/* Send button on the right */}
               <button
                 type="submit"
-                disabled={(!message.trim() && attachments.filter(f => !f.uploading).length === 0) || disabled || uploading || attachments.some(f => f.uploading)}
+                disabled={(!message.trim() && attachments.filter(f => !f.uploading).length === 0) || disabled || uploading || attachments.some(f => f.uploading) || isAtMessageLimit}
                 className={cn(buttonVariants({ size: "sm" }), "h-8 w-8 p-0 rounded-lg bg-primary hover:bg-primary/90")}
               >
                 <Send className="h-4 w-4" />

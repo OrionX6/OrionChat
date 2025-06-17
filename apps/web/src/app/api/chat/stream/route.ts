@@ -386,6 +386,9 @@ export async function POST(request: NextRequest) {
           
           console.log(`🚀 Starting generation for ${actualProvider}/${model} with maxTokens: ${maxTokensUsed} (model limit: ${modelMaxTokens})`);
 
+          // Track thinking content
+          let fullThinkingContent = '';
+          
           // Stream the response from the LLM
           for await (const chunk of router.stream({
             messages: chatMessages,
@@ -402,10 +405,17 @@ export async function POST(request: NextRequest) {
             fullResponse += chunk.content;
             tokenCount += 1;
             
+            // Accumulate thinking content
+            if (chunk.thinking) {
+              fullThinkingContent += chunk.thinking;
+            }
+            
             // Send chunk to client immediately
             const data = JSON.stringify({
               content: chunk.content,
-              done: chunk.done
+              done: chunk.done,
+              thinking: chunk.thinking,
+              isThinking: chunk.isThinking
             });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
@@ -428,7 +438,8 @@ export async function POST(request: NextRequest) {
                     model: model,
                     tokens_used: tokenCount,
                     response_time_ms: responseTime,
-                    finish_reason: 'stop'
+                    finish_reason: 'stop',
+                    thinking_content: fullThinkingContent || null
                   })
                   .select('id')
                   .single(),

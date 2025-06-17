@@ -7,9 +7,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Copy, RotateCcw, FileText, Image as ImageIcon, Download } from "lucide-react";
 import type { Database } from "@/lib/types/database";
 import Image from "next/image";
+import { CollapsibleThinking } from "./CollapsibleThinking";
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
   attachments?: FileAttachment[] | string;
+  thinking_content?: string;
 };
 
 interface FileAttachment {
@@ -102,6 +104,17 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Chain of thought for assistant messages */}
+        {!isUser && message.thinking_content && (
+          <div className="w-full mb-4">
+            <CollapsibleThinking 
+              thinkingContent={message.thinking_content}
+              isThinking={false}
+              isCompleted={true}
+            />
           </div>
         )}
 

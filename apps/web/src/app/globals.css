@@ -1,26 +1,27 @@
 @import "tailwindcss";
+@import "../styles/themes.css";
 
+/* Base CSS variables - will be overridden by theme classes */
 :root {
-  /* Light theme colors - slate blue */
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --primary: #1e40af;
-  --primary-foreground: #f8fafc;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --accent: #e2e8f0;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --ring: #1e40af;
+  --background: rgb(248 250 252);
+  --foreground: rgb(30 41 59);
+  --card: rgb(255 255 255);
+  --card-foreground: rgb(30 41 59);
+  --popover: rgb(255 255 255);
+  --popover-foreground: rgb(30 41 59);
+  --primary: rgb(30 64 175);
+  --primary-foreground: rgb(248 250 252);
+  --secondary: rgb(241 245 249);
+  --secondary-foreground: rgb(30 41 59);
+  --muted: rgb(241 245 249);
+  --muted-foreground: rgb(100 116 139);
+  --accent: rgb(226 232 240);
+  --accent-foreground: rgb(30 41 59);
+  --destructive: rgb(239 68 68);
+  --destructive-foreground: rgb(248 250 252);
+  --border: rgb(226 232 240);
+  --input: rgb(226 232 240);
+  --ring: rgb(30 64 175);
   --radius: 0.5rem;
 }
 
@@ -45,85 +46,111 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-inter: var(--font-inter);
+  --font-roboto: var(--font-roboto);
+  --font-open-sans: var(--font-open-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    /* Darker slate blue theme */
-    --background: #020617;
-    --foreground: #f1f5f9;
-    --muted: #0f172a;
-    --muted-foreground: #64748b;
-    --popover: #020617;
-    --popover-foreground: #f1f5f9;
-    --card: #0f172a;
-    --card-foreground: #f1f5f9;
-    --border: #1e293b;
-    --input: #1e293b;
-    --primary: #1e40af;
-    --primary-foreground: #f8fafc;
-    --secondary: #0f172a;
-    --secondary-foreground: #f1f5f9;
-    --accent: #334155;
-    --accent-foreground: #f1f5f9;
-    --destructive: #ef4444;
-    --destructive-foreground: #f8fafc;
-    --ring: #3b82f6;
-  }
-}
 
-[data-theme="dark"] {
-  /* Darker slate blue theme */
-  --background: #020617;
-  --foreground: #f1f5f9;
-  --muted: #0f172a;
-  --muted-foreground: #64748b;
-  --popover: #020617;
-  --popover-foreground: #f1f5f9;
-  --card: #0f172a;
-  --card-foreground: #f1f5f9;
-  --border: #1e293b;
-  --input: #1e293b;
-  --primary: #1e40af;
-  --primary-foreground: #f8fafc;
-  --secondary: #0f172a;
-  --secondary-foreground: #f1f5f9;
-  --accent: #334155;
-  --accent-foreground: #f1f5f9;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --ring: #3b82f6;
-}
-
-[data-theme="light"] {
-  /* Light theme colors - slate blue */
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --card: #ffffff;
-  --card-foreground: #1e293b;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --primary: #1e40af;
-  --primary-foreground: #f8fafc;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --accent: #e2e8f0;
-  --accent-foreground: #1e293b;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --ring: #1e40af;
-}
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Font family classes - applied to body with higher specificity */
+body.font-sans,
+body.font-sans * {
+  font-family: var(--font-sans), system-ui, sans-serif !important;
+}
+
+body.font-serif,
+body.font-serif * {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+body.font-mono,
+body.font-mono * {
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+}
+
+body.font-inter,
+body.font-inter * {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+}
+
+body.font-roboto,
+body.font-roboto * {
+  font-family: var(--font-roboto), system-ui, sans-serif !important;
+}
+
+body.font-opensans,
+body.font-opensans * {
+  font-family: var(--font-open-sans), system-ui, sans-serif !important;
+}
+
+/* Font preview classes - maximum specificity to override global font settings */
+body.font-sans .font-preview-sans,
+body.font-serif .font-preview-sans,
+body.font-mono .font-preview-sans,
+body.font-inter .font-preview-sans,
+body.font-roboto .font-preview-sans,
+body.font-opensans .font-preview-sans,
+body .font-preview-sans {
+  font-family: var(--font-geist-sans), system-ui, sans-serif !important;
+}
+
+body.font-sans .font-preview-serif,
+body.font-serif .font-preview-serif,
+body.font-mono .font-preview-serif,
+body.font-inter .font-preview-serif,
+body.font-roboto .font-preview-serif,
+body.font-opensans .font-preview-serif,
+body .font-preview-serif {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+body.font-sans .font-preview-mono,
+body.font-serif .font-preview-mono,
+body.font-mono .font-preview-mono,
+body.font-inter .font-preview-mono,
+body.font-roboto .font-preview-mono,
+body.font-opensans .font-preview-mono,
+body .font-preview-mono {
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
+}
+
+body.font-sans .font-preview-inter,
+body.font-serif .font-preview-inter,
+body.font-mono .font-preview-inter,
+body.font-inter .font-preview-inter,
+body.font-roboto .font-preview-inter,
+body.font-opensans .font-preview-inter,
+body .font-preview-inter {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+}
+
+body.font-sans .font-preview-roboto,
+body.font-serif .font-preview-roboto,
+body.font-mono .font-preview-roboto,
+body.font-inter .font-preview-roboto,
+body.font-roboto .font-preview-roboto,
+body.font-opensans .font-preview-roboto,
+body .font-preview-roboto {
+  font-family: var(--font-roboto), system-ui, sans-serif !important;
+}
+
+body.font-sans .font-preview-opensans,
+body.font-serif .font-preview-opensans,
+body.font-mono .font-preview-opensans,
+body.font-inter .font-preview-opensans,
+body.font-roboto .font-preview-opensans,
+body.font-opensans .font-preview-opensans,
+body .font-preview-opensans {
+  font-family: var(--font-open-sans), system-ui, sans-serif !important;
 }
 
 /* Hide Next.js development mode indicators */

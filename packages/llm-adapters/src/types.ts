@@ -21,6 +21,8 @@ export interface StreamChunk {
   content: string;
   done: boolean;
   usage?: TokenUsage;
+  thinking?: string; // For reasoning models like DeepSeek R1
+  isThinking?: boolean; // Indicates if this is thinking content
 }
 
 export interface TokenUsage {

@@ -100,8 +100,8 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
   
   // DeepSeek Models
   {
-    id: 'deepseek-r1',
-    name: 'deepseek-r1',
+    id: 'deepseek-reasoner',
+    name: 'deepseek-reasoner',
     provider: 'deepseek',
     displayName: 'DeepSeek R1',
     description: 'Reasoning model with reinforcement learning and 128K context (27x cheaper than o1)',
