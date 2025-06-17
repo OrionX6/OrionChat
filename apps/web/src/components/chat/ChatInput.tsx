@@ -138,7 +138,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
             // console.log(`Setting up XMLHttpRequest for ${file.name}`);
             
             // Track upload progress (file transfer to server, limit to 80% since server processing takes time)
-            xhr.upload.addEventListener('progress', (event) => {
+           xhr.upload.addEventListener('progress', (event) => {
               if (event.lengthComputable) {
                 // Limit to 80% since server processing (provider uploads) takes significant time
                 const uploadPercent = Math.round((event.loaded / event.total) * 80);

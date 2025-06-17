@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "cd apps/web && npm run dev",
-    "build": "cd apps/web && npm run build",
+    "build": "npm run build:packages && cd apps/web && npm run build",
+    "build:packages": "cd packages/shared-types && npm install && npm run build && cd ../llm-adapters && npm install && npm run build",
     "start": "cd apps/web && npm run start",
     "lint": "cd apps/web && npm run lint",
     "test": "cd apps/web && npm run test",
