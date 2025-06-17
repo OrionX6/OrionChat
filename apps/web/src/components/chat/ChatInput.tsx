@@ -74,6 +74,11 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
     adjustTextareaHeight();
   }, [message]);
 
+  // Reset search when conversation changes (new chat)
+  useEffect(() => {
+    setWebSearchEnabled(false);
+  }, [currentConversation?.id]);
+
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newMessage = e.target.value;
     setMessage(newMessage);

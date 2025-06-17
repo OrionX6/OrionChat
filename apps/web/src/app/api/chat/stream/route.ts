@@ -28,6 +28,29 @@ interface AttachmentContent {
   mime_type?: string;
 }
 
+// Helper function to detect image format from base64 data
+function detectImageFormat(base64Data: string): string {
+  // Convert first few bytes of base64 to check magic numbers
+  const binaryString = atob(base64Data.substring(0, 20));
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  // Check magic numbers for common image formats
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return 'image/jpeg';
+  } else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return 'image/png';
+  } else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return 'image/gif';
+  } else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+    return 'image/webp';
+  }
+  
+  return 'image/jpeg'; // Default fallback
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function processAttachments(attachments: FileAttachment[], supabase: any, provider: string): Promise<AttachmentContent[]> {
   const processedContent: AttachmentContent[] = [];
@@ -37,10 +60,10 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
       if (attachment.type.startsWith('image/')) {
         // For images, handle differently based on provider
         if (attachment.preview_url) {
-          if (provider === 'google') {
-            // Gemini requires base64 data, so download and convert the image
+          if (provider === 'google' || provider === 'anthropic') {
+            // Gemini and Claude require base64 data, so download and convert the image
             try {
-              console.log('Downloading image for Gemini:', attachment.preview_url);
+              console.log(`Downloading image for ${provider}:`, attachment.preview_url);
               const response = await fetch(attachment.preview_url);
               if (!response.ok) {
                 throw new Error(`Failed to download image: ${response.statusText}`);
@@ -48,17 +71,29 @@ async function processAttachments(attachments: FileAttachment[], supabase: any, 
 
               const arrayBuffer = await response.arrayBuffer();
               const base64 = Buffer.from(arrayBuffer).toString('base64');
+              
+              // Detect the actual image format from base64 data
+              const detectedMimeType = detectImageFormat(base64);
+              const responseMimeType = response.headers.get('content-type');
+              const finalMimeType = detectedMimeType; // Use detected format for accuracy
+              
+              console.log(`Image MIME type detection:`, {
+                original: attachment.type,
+                response: responseMimeType,
+                detected: detectedMimeType,
+                final: finalMimeType
+              });
 
               processedContent.push({
                 type: 'image_base64',
                 image_base64: {
                   data: base64,
-                  mimeType: attachment.type
+                  mimeType: finalMimeType
                 }
               });
-              console.log('Successfully converted image to base64 for Gemini');
+              console.log(`Successfully converted image to base64 for ${provider}`);
             } catch (error) {
-              console.error('Failed to download/convert image for Gemini:', error);
+              console.error(`Failed to download/convert image for ${provider}:`, error);
               // Fallback: skip this image
             }
           } else {
@@ -215,14 +250,38 @@ export async function POST(request: NextRequest) {
                   }
                 };
               } else if (attachment.type === 'image_base64') {
-                console.log('Adding base64 image to multimodal content for Gemini');
-                return {
-                  type: 'image',
-                  image: {
-                    base64: attachment.image_base64?.data,
-                    mimeType: attachment.image_base64?.mimeType || 'image/jpeg'
-                  }
-                };
+                if (provider === 'anthropic') {
+                  const base64Data = attachment.image_base64?.data || '';
+                  const declaredMimeType = attachment.image_base64?.mimeType || 'image/jpeg';
+                  // Double-check the MIME type based on actual data for Claude
+                  const actualMimeType = base64Data ? detectImageFormat(base64Data) : declaredMimeType;
+                  const dataLength = base64Data.length;
+                  
+                  console.log('Adding base64 image to multimodal content for Claude:', {
+                    declaredMimeType,
+                    actualMimeType,
+                    dataLength,
+                    dataPreview: base64Data.substring(0, 50) + '...'
+                  });
+                  
+                  return {
+                    type: 'image',
+                    source: {
+                      type: 'base64',
+                      media_type: actualMimeType,
+                      data: base64Data
+                    }
+                  };
+                } else {
+                  console.log('Adding base64 image to multimodal content for Gemini');
+                  return {
+                    type: 'image',
+                    image: {
+                      base64: attachment.image_base64?.data,
+                      mimeType: attachment.image_base64?.mimeType || 'image/jpeg'
+                    }
+                  };
+                }
               } else if (attachment.type === 'file_uri') {
                 // For Gemini file URIs, use the file reference directly
                 console.log('Adding file URI to multimodal content for Gemini:', attachment.file_uri);

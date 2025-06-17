@@ -6,6 +6,11 @@ export interface MultimodalContent {
     base64?: string;
     mimeType?: string;
   };
+  source?: {
+    type: 'base64';
+    media_type: string;
+    data: string;
+  };
   file_uri?: string;
   file_id?: string;
   mime_type?: string;

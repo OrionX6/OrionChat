@@ -8,12 +8,14 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
   costPerToken = { input: 0.08, output: 0.40 }; // per 1k tokens in cents (updated for 3.5 pricing)
   maxTokens = 200000;
   supportsFunctions = true;
-  supportsVision = false; // Claude 3.5 Haiku is text-only
+  supportsVision = true; // Claude 3.5 Haiku supports vision
   
   private client: Anthropic;
   
   constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ 
+      apiKey
+    });
   }
 
   private async convertToClaudeContent(content: string | any[], options?: StreamOptions): Promise<any> {
@@ -54,10 +56,56 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
             });
           }
         } else if (item.type === 'image') {
-          contentBlocks.push({
-            type: 'text',
-            text: '[Image content - not supported by Claude 3.5 Haiku]'
-          });
+          // Handle image content for Claude 3.5 Haiku vision support
+          if (item.source?.type === 'base64' && item.source?.data) {
+            // Image already in Claude format from API route
+            contentBlocks.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: item.source.media_type || 'image/jpeg',
+                data: item.source.data
+              }
+            });
+          } else if (item.image?.base64) {
+            // Legacy format - convert to Claude format
+            contentBlocks.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: item.image.mimeType || 'image/jpeg',
+                data: item.image.base64
+              }
+            });
+          } else if (item.image?.url) {
+            // For image URLs, we need to fetch and convert to base64
+            try {
+              const response = await fetch(item.image.url);
+              const arrayBuffer = await response.arrayBuffer();
+              const base64 = Buffer.from(arrayBuffer).toString('base64');
+              const mimeType = response.headers.get('content-type') || item.image.mimeType || 'image/jpeg';
+              
+              contentBlocks.push({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mimeType,
+                  data: base64
+                }
+              });
+            } catch (error) {
+              console.error('Error fetching image for Claude:', error);
+              contentBlocks.push({
+                type: 'text',
+                text: '[Image could not be loaded]'
+              });
+            }
+          } else {
+            contentBlocks.push({
+              type: 'text',
+              text: '[Invalid image format]'
+            });
+          }
         } else if (item.type === 'file_uri') {
           contentBlocks.push({
             type: 'text',
@@ -126,14 +174,14 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
       const systemMessage = messages.find(m => m.role === 'system');
       const conversationMessages = messages.filter(m => m.role !== 'system');
       
-      // Check if any message has file content that requires beta support
-      const hasFileContent = conversationMessages.some(msg => 
+      // Check if any message has PDF content that requires beta support
+      const hasPDFContent = conversationMessages.some(msg => 
         Array.isArray(msg.content) && 
         msg.content.some(item => item.type === 'file_id')
       );
 
       const createParams: any = {
-        model: 'claude-3-5-sonnet-20241022', // Updated to claude-3-5-sonnet for PDF support
+        model: options.model || 'claude-3-5-haiku-20241022', // Use the actual Haiku model
         max_tokens: options.maxTokens || 8192,
         temperature: options.temperature || 0.7,
         system: systemMessage ? await this.convertToClaudeContent(systemMessage.content, options) : undefined,
@@ -144,11 +192,14 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
         stream: true
       };
 
-      // Beta header is already set above for PDF support
-      // Suppress unused variable warning
-      void hasFileContent;
+      // Add beta header only for PDF support when needed
+      const streamOptions = hasPDFContent ? {
+        headers: {
+          'anthropic-beta': 'pdfs-2024-09-25'
+        }
+      } : {};
 
-      const stream = this.client.messages.stream(createParams);
+      const stream = this.client.messages.stream(createParams, streamOptions);
       
       for await (const chunk of stream) {
         if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
@@ -168,7 +219,7 @@ export class ClaudeHaikuProvider implements CostOptimizedProvider {
     }
   }
   
-  async embed(text: string): Promise<number[]> {
+  async embed(_text: string): Promise<number[]> {
     // Claude doesn't provide embeddings, so we'll use a placeholder
     // In a real implementation, you might want to use a different service
     throw new Error('Claude does not support embeddings. Use OpenAI for embeddings.');

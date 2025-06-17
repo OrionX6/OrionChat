@@ -34,7 +34,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     },
     supportsFunctions: true,
     supportsVision: true,
-    supportsWebSearch: true,
+    supportsWebSearch: false,
     supportsFileUpload: true,
     supportsReasoning: false,
     icon: '⚡',
@@ -53,9 +53,9 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
       output: 0.40,
     },
     supportsFunctions: true,
-    supportsVision: false, // Claude 3.5 Haiku is text-only, no vision support
+    supportsVision: true, // Claude 3.5 Haiku supports vision
     supportsWebSearch: false,
-    supportsFileUpload: true, // Supports text files and PDFs, but not images
+    supportsFileUpload: true, // Supports text files, PDFs, and images
     supportsReasoning: true,
     icon: '💙',
   },
