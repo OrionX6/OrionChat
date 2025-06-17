@@ -193,8 +193,34 @@ The application supports PDF uploads to multiple LLM providers:
 
 **Provider Implementations**:
 - **OpenAI** (`openai-mini.ts`): Direct file_id reference with `type: 'file'`
-- **Anthropic** (`claude-haiku.ts`): Base64 conversion with `type: 'document'`
+- **Anthropic** (`claude-haiku.ts`): Base64 conversion with `type: 'document'` for PDFs, `type: 'image'` for images
 - **Gemini**: File URI reference (existing implementation)
+
+### Claude 3.5 Haiku Vision Support Implementation
+**Multimodal Content Processing**:
+Claude 3.5 Haiku supports both PDF documents and image analysis. Key implementation details:
+
+1. **Beta Header Management**: The `anthropic-beta: pdfs-2024-09-25` header is only applied when PDF content is detected, not globally. This prevents interference with image processing.
+
+2. **Image Format Detection**: Automatic MIME type detection from base64 data using magic number analysis:
+   - JPEG: `0xFF 0xD8 0xFF`
+   - PNG: `0x89 0x50 0x4E 0x47`
+   - GIF: `0x47 0x49 0x46`
+   - WebP: `0x52 0x49 0x46 0x46`
+
+3. **Content Structure**: Images use Claude's specific format:
+   ```javascript
+   {
+     type: 'image',
+     source: {
+       type: 'base64',
+       media_type: 'image/jpeg', // Detected format
+       data: 'base64EncodedImageData'
+     }
+   }
+   ```
+
+4. **Error Prevention**: The system validates MIME types against actual image data to prevent "Image does not match the provided media type" errors.
 
 ### File Upload UX Implementation
 **Enhanced Upload Experience (`ChatInput.tsx`)**:
@@ -267,6 +293,12 @@ const searchFunction = {
 - Monitor streaming response times in browser DevTools
 - Check database query performance in Supabase Studio
 - Verify async database operations aren't blocking streams
+
+### Claude 3.5 Haiku Vision Troubleshooting
+- **"Image does not match provided media type" error**: Fixed by implementing automatic MIME type detection from base64 data instead of relying on file extensions
+- **Images not working but PDFs working**: Fixed by removing global `anthropic-beta` header and applying it conditionally only for PDF content
+- **Vision capability**: Claude 3.5 Haiku supports vision as of February 24th, 2025 - no special beta header required for images
+- **Beta header conflicts**: PDF and vision capabilities use different requirements - PDF needs `anthropic-beta: pdfs-2024-09-25`, images work with default API
 
 ### PDF-Specific Troubleshooting
 - **File size limits**: OpenAI (32MB), Anthropic (varies), Gemini (varies)
