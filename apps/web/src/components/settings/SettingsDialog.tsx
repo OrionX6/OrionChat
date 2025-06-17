@@ -379,9 +379,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       </div>
 
                       <div className="pt-6 border-t border-border/50">
-                        <Button className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
-                          Save Preferences
-                        </Button>
+                        <div className="text-center text-sm text-muted-foreground">
+                          Settings are automatically saved as you change them
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

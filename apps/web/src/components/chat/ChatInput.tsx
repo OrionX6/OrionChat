@@ -442,8 +442,14 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
                 onChange={handleMessageChange}
                 onKeyDown={handleKeyDown}
                 placeholder={isAtMessageLimit ? `Message limit reached (${usage.used}/${usage.limit}). Resets in ${usage.daysUntilReset} days.` : "Type your message here..."}
-                className="w-full min-h-[24px] resize-none border-0 p-0 text-base bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60 overflow-y-auto"
-                style={{ lineHeight: '24px' }}
+                className="w-full min-h-[24px] resize-none border-0 border-none outline-none ring-0 p-0 text-base bg-transparent bg-none shadow-none focus:border-none focus:outline-none focus:ring-0 focus:shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-none focus-visible:outline-none placeholder:text-muted-foreground/60 overflow-y-auto"
+                style={{ 
+                  lineHeight: '24px',
+                  border: 'none',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  background: 'transparent'
+                }}
                 rows={1}
                 disabled={disabled || isAtMessageLimit}
               />

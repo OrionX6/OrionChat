@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export type ColorTheme = 'default' | 'ocean' | 'forest' | 'sunset' | 'lavender' | 'rose';
 export type BaseTheme = 'light' | 'dark' | 'system';
@@ -11,6 +12,7 @@ interface ThemeContextType {
   setBaseTheme: (theme: BaseTheme) => void;
   setColorTheme: (theme: ColorTheme) => void;
   resolvedTheme: 'light' | 'dark';
+  loading: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -26,9 +28,60 @@ export function ThemeProvider({
   defaultBaseTheme = 'system',
   defaultColorTheme = 'default'
 }: ThemeProviderProps) {
-  const [baseTheme, setBaseTheme] = useState<BaseTheme>(defaultBaseTheme);
-  const [colorTheme, setColorTheme] = useState<ColorTheme>(defaultColorTheme);
+  // Initialize with localStorage values if available to prevent flash
+  const getInitialBaseTheme = (): BaseTheme => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('base-theme') as BaseTheme;
+      return stored || defaultBaseTheme;
+    }
+    return defaultBaseTheme;
+  };
+
+  const getInitialColorTheme = (): ColorTheme => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('color-theme') as ColorTheme;
+      return stored || defaultColorTheme;
+    }
+    return defaultColorTheme;
+  };
+
+  const [baseTheme, setBaseThemeState] = useState<BaseTheme>(getInitialBaseTheme);
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(getInitialColorTheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  // Load settings from database when component mounts
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select('base_theme, color_theme')
+            .eq('id', user.id)
+            .single();
+
+          if (!error && data) {
+            const dbBaseTheme = (data.base_theme as BaseTheme) || 'system';
+            const dbColorTheme = (data.color_theme as ColorTheme) || 'default';
+            
+            // Only update if different from current values to avoid unnecessary re-renders
+            if (dbBaseTheme !== baseTheme) setBaseThemeState(dbBaseTheme);
+            if (dbColorTheme !== colorTheme) setColorThemeState(dbColorTheme);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading settings from database:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSettings();
+  }, [supabase, baseTheme, colorTheme]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -53,23 +106,32 @@ export function ThemeProvider({
     // Apply color theme
     root.classList.add(`theme-${colorTheme}`);
     
-    // Store in localStorage
+    // Store in localStorage as backup
     localStorage.setItem('base-theme', baseTheme);
     localStorage.setItem('color-theme', colorTheme);
   }, [baseTheme, colorTheme]);
 
-  useEffect(() => {
-    // Load from localStorage on mount
-    const storedBaseTheme = localStorage.getItem('base-theme') as BaseTheme;
-    const storedColorTheme = localStorage.getItem('color-theme') as ColorTheme;
-    
-    if (storedBaseTheme) {
-      setBaseTheme(storedBaseTheme);
+  // Save to database when themes change
+  const saveToDatabase = async (base?: BaseTheme, color?: ColorTheme) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const updateData: any = { updated_at: new Date().toISOString() };
+      if (base) updateData.base_theme = base;
+      if (color) updateData.color_theme = color;
+
+      await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          email: user.email!,
+          ...updateData
+        });
+    } catch (error) {
+      console.error('Error saving theme to database:', error);
     }
-    if (storedColorTheme) {
-      setColorTheme(storedColorTheme);
-    }
-  }, []);
+  };
 
   useEffect(() => {
     // Listen for system theme changes
@@ -88,12 +150,23 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [baseTheme]);
 
+  const setBaseTheme = (theme: BaseTheme) => {
+    setBaseThemeState(theme);
+    saveToDatabase(theme, undefined);
+  };
+
+  const setColorTheme = (theme: ColorTheme) => {
+    setColorThemeState(theme);
+    saveToDatabase(undefined, theme);
+  };
+
   const value = {
     baseTheme,
     colorTheme,
     setBaseTheme,
     setColorTheme,
     resolvedTheme,
+    loading,
   };
 
   return (

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FontProvider } from "@/contexts/FontContext";
 import { MessageLimitProvider } from "@/contexts/MessageLimitContext";
+import { themeScript } from "@/lib/theme-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${jetbrainsMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} antialiased`}
       >
