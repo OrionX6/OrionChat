@@ -26,8 +26,6 @@ export function LoginForm() {
       ? await signUp(email, password)
       : await signIn(email, password)
 
-    console.log('Auth result:', result) // Debug log
-
     if (result.error) {
       setError(result.error)
     } else if (isSignUp && result.success) {

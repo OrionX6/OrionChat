@@ -4,11 +4,18 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
+interface AuthResult {
+  error?: string
+  success?: boolean
+  user?: User | null
+  needsConfirmation?: boolean
+}
+
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (email: string, password: string) => Promise<{ error?: string }>
+  signIn: (email: string, password: string) => Promise<AuthResult>
+  signUp: (email: string, password: string) => Promise<AuthResult>
   signOut: () => Promise<void>
 }
 
@@ -23,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const ensureUserProfile = async (user: User) => {
     try {
       // Check if user profile exists
-      const { data, error } = await supabase
+      const { data: _, error } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('id', user.id)
