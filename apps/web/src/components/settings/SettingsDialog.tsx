@@ -433,22 +433,44 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             </div>
                           </div>
 
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/10 dark:to-indigo-950/10 p-6 hover:shadow-md transition-all">
+                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/10 dark:to-cyan-950/10 p-6 hover:shadow-md transition-all">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                  <h4 className="text-lg font-semibold">Gemini 2.5 Flash</h4>
+                                  <h4 className="text-lg font-semibold">Gemini 2.0 Flash</h4>
                                   <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                    Search
+                                    Multimodal
                                   </Badge>
                                 </div>
-                                <p className="text-muted-foreground mb-3">Google's latest model with native web search grounding</p>
+                                <p className="text-muted-foreground mb-3">Google's workhorse model with 1M context and multimodal I/O</p>
                                 <div className="flex flex-wrap gap-2">
                                   <Badge variant="outline" className="text-xs">Web Search</Badge>
                                   <Badge variant="outline" className="text-xs">PDF Support</Badge>
-                                  <Badge variant="outline" className="text-xs">Multimodal</Badge>
-                                  <Badge variant="outline" className="text-xs">Real-time Info</Badge>
+                                  <Badge variant="outline" className="text-xs">Vision</Badge>
+                                  <Badge variant="outline" className="text-xs">1M Context</Badge>
+                                </div>
+                              </div>
+                              <Switch defaultChecked />
+                            </div>
+                          </div>
+
+                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/10 dark:to-purple-950/10 p-6 hover:shadow-md transition-all">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                                  <h4 className="text-lg font-semibold">Gemini 2.5 Flash</h4>
+                                  <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                                    Advanced
+                                  </Badge>
+                                </div>
+                                <p className="text-muted-foreground mb-3">Google's advanced model with enhanced capabilities and web search</p>
+                                <div className="flex flex-wrap gap-2">
+                                  <Badge variant="outline" className="text-xs">Web Search</Badge>
+                                  <Badge variant="outline" className="text-xs">PDF Support</Badge>
+                                  <Badge variant="outline" className="text-xs">Vision</Badge>
+                                  <Badge variant="outline" className="text-xs">1M Context</Badge>
                                 </div>
                               </div>
                               <Switch defaultChecked />

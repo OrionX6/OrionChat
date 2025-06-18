@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe, Diamond } from "lucide-react";
+import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -45,7 +45,6 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
       case 'upload': return <FileText className="h-4 w-4" />;
       case 'reasoning': return <Brain className="h-4 w-4" />;
       case 'functions': return <Wrench className="h-4 w-4" />;
-      case 'premium': return <Diamond className="h-4 w-4" />;
       default: return null;
     }
   };
@@ -57,7 +56,6 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
       case 'upload': return 'File and document upload';
       case 'reasoning': return 'Advanced reasoning and problem solving';
       case 'functions': return 'Function calling and tools';
-      case 'premium': return 'Premium model features';
       default: return '';
     }
   };
@@ -70,7 +68,6 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
     if (model.supportsWebSearch) capabilities.push('websearch');
     if (model.supportsFileUpload) capabilities.push('upload');
     if (model.supportsReasoning) capabilities.push('reasoning');
-    if (model.provider === 'anthropic' || model.provider === 'openai') capabilities.push('premium');
     
     return (
       <DropdownMenuItem

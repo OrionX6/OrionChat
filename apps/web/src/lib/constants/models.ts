@@ -56,7 +56,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     supportsVision: true, // Claude 3.5 Haiku supports vision
     supportsWebSearch: false,
     supportsFileUpload: true, // Supports text files, PDFs, and images
-    supportsReasoning: true,
+    supportsReasoning: false,
     icon: '💙',
   },
   
@@ -94,7 +94,7 @@ export const AVAILABLE_MODELS: ModelInfo[] = [
     supportsVision: true,
     supportsWebSearch: true,
     supportsFileUpload: true,
-    supportsReasoning: true,
+    supportsReasoning: false,
     icon: '🧠',
   },
   

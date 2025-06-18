@@ -350,7 +350,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
     m.provider === currentModelProvider && 
     m.name === currentModelName
   );
-  const supportsWebSearch = currentModel?.supportsWebSearch && currentConversation?.is_web_search_enabled;
+  const supportsWebSearch = currentModel?.supportsWebSearch;
 
   return (
     <div ref={containerRef} className="relative">

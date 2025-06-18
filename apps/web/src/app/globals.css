@@ -56,6 +56,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
+  overflow: hidden; /* Prevent page-level scrolling */
+  height: 100vh; /* Ensure body takes full viewport height */
+}
+
+html {
+  overflow: hidden; /* Prevent html-level scrolling */
+  height: 100vh; /* Ensure html takes full viewport height */
 }
 
 /* Font family classes - applied to body with higher specificity */
