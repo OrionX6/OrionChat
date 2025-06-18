@@ -141,46 +141,9 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="start" className="w-[450px] max-h-[600px] overflow-y-auto bg-background border border-border">
-        <div className="p-3 border-b">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search models..."
-              className="w-full pl-10 pr-4 py-2 bg-muted/50 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-        </div>
-        
-        <div className="p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-lg">Unlock all models + higher limits</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-2xl font-bold text-pink-500">$8</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-            </div>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white px-6">
-              Upgrade now
-            </Button>
-          </div>
-        </div>
         
         <div className="py-2">
           {enabledModels.map(renderModelItem)}
-        </div>
-        
-        <div className="p-3 border-t flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <ChevronDown className="h-4 w-4 rotate-180" />
-            <span>Show all</span>
-          </div>
-          <div className="p-1 rounded hover:bg-muted cursor-pointer">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-            </svg>
-          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
