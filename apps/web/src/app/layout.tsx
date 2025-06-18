@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, JetBrains_Mono, Inter, Roboto, Open_Sans } from "next/font/google";
+import { Geist, JetBrains_Mono, Playfair_Display, Poppins, Crimson_Text } from "next/font/google";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FontProvider } from "@/contexts/FontContext";
@@ -17,20 +18,21 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
 });
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
+const crimsonText = Crimson_Text({
+  variable: "--font-crimson",
   subsets: ["latin"],
+  weight: ["400", "600"],
 });
 
 export const metadata: Metadata = {
@@ -44,12 +46,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark theme-default">
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body
-        className={`${geistSans.variable} ${jetbrainsMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} antialiased`}
+        className={`${geistSans.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} ${poppins.variable} ${crimsonText.variable} antialiased font-sans`}
       >
         <ThemeProvider defaultBaseTheme="dark" defaultColorTheme="default">
           <FontProvider>

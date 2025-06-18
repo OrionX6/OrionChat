@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -23,14 +24,11 @@ import { useFont, type FontFamily } from "@/contexts/FontContext";
 import {
   User,
   Palette,
-  History,
   Zap,
   Key,
   Link,
   Contact,
-  Monitor,
   Eye,
-  EyeOff,
   BarChart3,
   Keyboard
 } from "lucide-react";
@@ -55,14 +53,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     interests: "Interests, values, or preferences to keep in mind"
   });
 
-  const [settings, setSettings] = useState({
-    boringTheme: false,
-    hidePersonalInfo: false,
-    disableThematicBreaks: false,
-    statsForNerds: false,
-    customInstructions: "",
-    webSearch: true
-  });
 
   const [shortcuts] = useState([
     { action: "Search", shortcut: "⌘ K" },
@@ -75,6 +65,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       <DialogContent className="max-w-5xl h-[85vh] p-0 bg-background border shadow-2xl flex flex-col">
         <DialogHeader className="px-8 py-6 border-b bg-gradient-to-r from-background to-muted/20 flex-shrink-0">
           <DialogTitle className="text-2xl font-bold tracking-tight">Settings</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Manage your account, preferences, and application settings
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden min-h-0">
@@ -94,13 +87,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 >
                   <Palette className="h-5 w-5" />
                   Theme & Appearance
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="history" 
-                  className="w-full justify-start gap-3 px-4 py-3 rounded-lg text-left font-medium transition-all hover:bg-muted/50 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50"
-                >
-                  <History className="h-5 w-5" />
-                  Visual Options
                 </TabsTrigger>
                 <TabsTrigger 
                   value="models" 
@@ -350,9 +336,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                               { name: 'sans', label: 'Geist Sans', preview: 'Modern and clean', previewClass: 'font-preview-sans' },
                               { name: 'serif', label: 'Serif', preview: 'Traditional and elegant', previewClass: 'font-preview-serif' },
                               { name: 'mono', label: 'JetBrains Mono', preview: 'Code-friendly spacing', previewClass: 'font-preview-mono' },
-                              { name: 'inter', label: 'Inter', preview: 'Highly readable', previewClass: 'font-preview-inter' },
-                              { name: 'roboto', label: 'Roboto', preview: 'Google\'s material font', previewClass: 'font-preview-roboto' },
-                              { name: 'opensans', label: 'Open Sans', preview: 'Friendly and open', previewClass: 'font-preview-opensans' }
+                              { name: 'playfair', label: 'Playfair Display', preview: 'Elegant and sophisticated', previewClass: 'font-preview-playfair' },
+                              { name: 'poppins', label: 'Poppins', preview: 'Geometric and friendly', previewClass: 'font-preview-poppins' },
+                              { name: 'crimson', label: 'Crimson Text', preview: 'Literary and readable', previewClass: 'font-preview-crimson' }
                             ] as Array<{name: FontFamily, label: string, preview: string, previewClass: string}>).map((font) => (
                               <button
                                 key={font.name}
@@ -388,96 +374,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 </div>
               </TabsContent>
 
-              <TabsContent value="history" className="m-0 p-8">
-                <div className="space-y-8">
-                  <Card className="overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20">
-                      <CardTitle className="flex items-center gap-2">
-                        <Monitor className="h-5 w-5" />
-                        Visual Options
-                      </CardTitle>
-                      <CardDescription>
-                        Customize the appearance and behavior of your chat experience
-                      </CardDescription>
-                    </CardHeader>
-                  <CardContent className="space-y-8 p-8">
-                    <div className="space-y-6">
-                      <div className="flex items-start justify-between p-4 rounded-lg border bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/40 hover:to-muted/20 transition-all">
-                        <div className="flex-1">
-                          <Label className="text-base font-medium">Boring Theme</Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            If you think the dark is a bit much, turn this on to tone it down.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.boringTheme}
-                          onCheckedChange={(checked) => 
-                            setSettings(prev => ({ ...prev, boringTheme: checked }))
-                          }
-                          className="ml-4"
-                        />
-                      </div>
-
-                      <div className="flex items-start justify-between p-4 rounded-lg border bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/40 hover:to-muted/20 transition-all">
-                        <div className="flex-1">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <EyeOff className="h-4 w-4" />
-                            Hide Personal Information
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Hides your name and email from the UI.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.hidePersonalInfo}
-                          onCheckedChange={(checked) => 
-                            setSettings(prev => ({ ...prev, hidePersonalInfo: checked }))
-                          }
-                          className="ml-4"
-                        />
-                      </div>
-
-                      <div className="flex items-start justify-between p-4 rounded-lg border bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/40 hover:to-muted/20 transition-all">
-                        <div className="flex-1">
-                          <Label className="text-base font-medium">Disable Thematic Breaks</Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Hides horizontal lines in chat messages. Some browsers have trouble rendering these, turn this off if you have large gaps with the message.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.disableThematicBreaks}
-                          onCheckedChange={(checked) => 
-                            setSettings(prev => ({ ...prev, disableThematicBreaks: checked }))
-                          }
-                          className="ml-4"
-                        />
-                      </div>
-
-                      <div className="flex items-start justify-between p-4 rounded-lg border bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/40 hover:to-muted/20 transition-all">
-                        <div className="flex-1">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4" />
-                            Stats for Nerds
-                          </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Enables more insights into message stats including tokens per second, time to first token, and estimated tokens in the message.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.statsForNerds}
-                          onCheckedChange={(checked) => 
-                            setSettings(prev => ({ ...prev, statsForNerds: checked }))
-                          }
-                          className="ml-4"
-                        />
-                      </div>
-                    </div>
-
-
-                  </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
 
               <TabsContent value="models" className="m-0 p-8">
                 <div className="space-y-8">

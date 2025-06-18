@@ -359,7 +359,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
         <div className="px-6 h-full">
           <div className="max-w-4xl mx-auto h-full relative">
             {/* Blur area that extends full height with square bottom */}
-            <div className="absolute inset-0 backdrop-blur-lg bg-background/20" 
+            <div className="absolute inset-0 backdrop-blur-lg bg-primary/12" 
                  style={{
                    maskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)',
                    WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 20%)',
@@ -435,7 +435,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
             )}
 
             {/* Text input area */}
-            <div className="relative p-4 border border-border/20 rounded-3xl bg-card/20 backdrop-blur-xl focus-within:border-primary transition-colors duration-200 shadow-lg">
+            <div className="relative p-4 border border-border/20 rounded-3xl bg-primary/12 backdrop-blur-xl focus-within:border-primary focus-within:bg-primary/20 transition-all duration-200 shadow-lg">
               <Textarea
                 ref={textareaRef}
                 value={message}
@@ -509,7 +509,7 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               <button
                 type="submit"
                 disabled={(!message.trim() && attachments.filter(f => !f.uploading).length === 0) || disabled || uploading || attachments.some(f => f.uploading) || isAtMessageLimit}
-                className={cn(buttonVariants({ size: "sm" }), "h-8 w-8 p-0 rounded-lg bg-primary hover:bg-primary/90")}
+                className={cn(buttonVariants({ size: "sm" }), "h-8 w-8 p-0 rounded-lg bg-primary hover:bg-primary/90 mr-2")}
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -530,16 +530,6 @@ export function ChatInput({ onSend, disabled = false, onTypingChange, currentCon
               }}
             />
           </form>
-
-          {/* Footer */}
-          <div className="flex items-center justify-center mt-4">
-            <div className="text-xs text-muted-foreground">
-              Make sure you agree to our{" "}
-              <button className="underline hover:no-underline">Terms</button>
-              {" "}and{" "}
-              <button className="underline hover:no-underline">Privacy Policy</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

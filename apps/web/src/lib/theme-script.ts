@@ -10,10 +10,21 @@ export const themeScript = `
     const root = document.documentElement;
     const body = document.body;
     
+    // Safety check for body
+    if (!body) return;
+    
     // Remove any existing theme classes
     root.classList.remove('light', 'dark');
     root.classList.remove('theme-default', 'theme-ocean', 'theme-forest', 'theme-sunset', 'theme-lavender', 'theme-rose');
-    body.classList.remove('font-sans', 'font-serif', 'font-mono', 'font-inter', 'font-roboto', 'font-opensans');
+    body.classList.remove('font-sans', 'font-serif', 'font-mono', 'font-playfair', 'font-poppins', 'font-crimson');
+    
+    // Handle legacy font names
+    const legacyFontMappings = {
+      'inter': 'sans',
+      'roboto': 'poppins', 
+      'opensans': 'poppins'
+    };
+    const mappedFont = legacyFontMappings[fontFamily] || fontFamily;
     
     // Determine resolved base theme
     let resolvedTheme = 'dark';
@@ -26,7 +37,7 @@ export const themeScript = `
     // Apply themes immediately
     root.classList.add(resolvedTheme);
     root.classList.add('theme-' + colorTheme);
-    body.classList.add('font-' + fontFamily);
+    body.classList.add('font-' + mappedFont);
     
   } catch (error) {
     // Fallback to defaults if anything fails

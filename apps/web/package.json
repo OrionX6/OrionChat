@@ -25,6 +25,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "katex": "^0.16.22",
     "lucide-react": "^0.513.0",
     "next": "15.3.3",
     "openai": "^5.5.1",
@@ -33,6 +34,8 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.1",
     "react-syntax-highlighter": "^15.6.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "tailwind-merge": "^3.3.0",
     "uuid": "^11.1.0"
   },

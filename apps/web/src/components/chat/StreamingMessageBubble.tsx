@@ -2,10 +2,27 @@
 
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
 
 interface StreamingMessageBubbleProps {
   content: string;
+}
+
+// Function to preprocess content and wrap standalone LaTeX commands in math delimiters
+function preprocessMathContent(content: string): string {
+  // Pattern to match standalone LaTeX commands that aren't already wrapped in math delimiters
+  const latexCommandPattern = /(?<!\$)\\(?:boxed|frac|sum|int|prod|lim|sqrt|text|mathbf|mathit|mathrm|operatorname|left|right|begin|end)\b[^$]*?(?:\{[^}]*\}|\[[^\]]*\])*(?!\$)/g;
+
+  let processedContent = content;
+
+  // Wrap standalone LaTeX commands
+  processedContent = processedContent.replace(latexCommandPattern, (match) => {
+    return `$${match}$`;
+  });
+
+  return processedContent;
 }
 
 function parseStreamingContent(content: string) {
@@ -143,9 +160,68 @@ export const StreamingMessageBubble = memo(function StreamingMessageBubble({ con
             } else {
               return (
                 <div key={index} className={`${contentParts.some(part => part.type === 'code') ? 'px-4 py-3' : ''} relative`}>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                    {part.content}
-                  </p>
+                  <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <div className="not-prose w-full max-w-none -my-3 first:mt-0 last:mb-0">
+                              <CodeBlock
+                                code={String(children).replace(/\n$/, '')}
+                                language={match[1]}
+                              />
+                            </div>
+                          ) : (
+                            <code className="bg-muted px-1 py-0.5 rounded text-base" {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        p({ children }: any) {
+                          return <p className="mb-3 last:mb-0 text-base leading-relaxed">{children}</p>;
+                        },
+                        h1({ children }: any) {
+                          return <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0">{children}</h1>;
+                        },
+                        h2({ children }: any) {
+                          return <h2 className="text-base font-semibold mt-4 mb-2 first:mt-0">{children}</h2>;
+                        },
+                        h3({ children }: any) {
+                          return <h3 className="text-base font-semibold mt-3 mb-1 first:mt-0">{children}</h3>;
+                        },
+                        ul({ children }: any) {
+                          return <ul className="text-base space-y-1 ml-6 list-disc list-outside mb-3">{children}</ul>;
+                        },
+                        ol({ children }: any) {
+                          return <ol className="text-base space-y-1 ml-6 list-decimal list-outside mb-3">{children}</ol>;
+                        },
+                        li({ children }: any) {
+                          return <li className="text-base">{children}</li>;
+                        },
+                        strong({ children }: any) {
+                          return <strong className="font-semibold">{children}</strong>;
+                        },
+                        em({ children }: any) {
+                          return <em className="italic">{children}</em>;
+                        },
+                        blockquote({ children }: any) {
+                          return (
+                            <blockquote className="border-l-4 border-muted-foreground/20 pl-4 italic text-muted-foreground">
+                              {children}
+                            </blockquote>
+                          );
+                        },
+                        hr({ }: any) {
+                          return <hr className="border-border my-4" />;
+                        },
+                      }}
+                    >
+                      {preprocessMathContent(part.content)}
+                    </ReactMarkdown>
+                  </div>
                   {!part.isComplete && (
                     <span className="inline-flex items-center ml-1">
                       <div className="w-1 h-1 bg-muted-foreground rounded-full animate-pulse"></div>

@@ -2,6 +2,8 @@
 
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, RotateCcw, FileText, Image as ImageIcon, Download } from "lucide-react";
@@ -27,7 +29,22 @@ interface MessageBubbleProps {
   onRetry?: () => void;
 }
 
-// Removed unused functions since we're now using ReactMarkdown
+// Function to preprocess content and wrap standalone LaTeX commands in math delimiters
+function preprocessMathContent(content: string): string {
+  let processedContent = content;
+
+  // More sophisticated pattern to match complete LaTeX expressions
+  // This handles nested braces and complex expressions like \boxed{6:00 \text{ AM the next day}}
+  const latexPattern = /(?<!\$)\\(?:boxed|frac|sum|int|prod|lim|sqrt|text|mathbf|mathit|mathrm|operatorname|left|right|begin|end)\b(?:\{(?:[^{}]|\{[^{}]*\})*\}|\[[^\]]*\])*(?!\$)/g;
+
+  // Find all matches and wrap them
+  processedContent = processedContent.replace(latexPattern, (match) => {
+    // Don't wrap if it's already inside math delimiters
+    return `$${match}$`;
+  });
+
+  return processedContent;
+}
 
 export const MessageBubble = memo(function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -126,14 +143,14 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
           }`}
         >
           {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </p>
           ) : (
-            <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
+            <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
               <ReactMarkdown
-                remarkPlugins={[]}
-                rehypePlugins={[]}
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
                 components={{
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
@@ -145,13 +162,13 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                         />
                       </div>
                     ) : (
-                      <code className="bg-muted px-1 py-0.5 rounded text-sm" {...props}>
+                      <code className="bg-muted px-1 py-0.5 rounded text-base" {...props}>
                         {children}
                       </code>
                     );
                   },
                   p({ children }: any) {
-                    return <p className="mb-3 last:mb-0 text-sm leading-relaxed">{children}</p>;
+                    return <p className="mb-3 last:mb-0 text-base leading-relaxed">{children}</p>;
                   },
                   h1({ children }: any) {
                     return <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0">{children}</h1>;
@@ -160,16 +177,16 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                     return <h2 className="text-base font-semibold mt-4 mb-2 first:mt-0">{children}</h2>;
                   },
                   h3({ children }: any) {
-                    return <h3 className="text-sm font-semibold mt-3 mb-1 first:mt-0">{children}</h3>;
+                    return <h3 className="text-base font-semibold mt-3 mb-1 first:mt-0">{children}</h3>;
                   },
                   ul({ children }: any) {
-                    return <ul className="text-sm space-y-1 ml-6 list-disc list-outside mb-3">{children}</ul>;
+                    return <ul className="text-base space-y-1 ml-6 list-disc list-outside mb-3">{children}</ul>;
                   },
                   ol({ children }: any) {
-                    return <ol className="text-sm space-y-1 ml-6 list-decimal list-outside mb-3">{children}</ol>;
+                    return <ol className="text-base space-y-1 ml-6 list-decimal list-outside mb-3">{children}</ol>;
                   },
                   li({ children }: any) {
-                    return <li className="text-sm">{children}</li>;
+                    return <li className="text-base">{children}</li>;
                   },
                   strong({ children }: any) {
                     return <strong className="font-semibold">{children}</strong>;
@@ -189,7 +206,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                   },
                 }}
               >
-                {message.content}
+                {preprocessMathContent(message.content)}
               </ReactMarkdown>
             </div>
           )}

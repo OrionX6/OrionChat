@@ -130,12 +130,71 @@ When working on chat functionality:
 2. Server-side uses `LLMRouter` from `@orion-chat/llm-adapters`
 3. Database message saving happens asynchronously to avoid blocking streams
 4. State updates are atomic to prevent UI flickering
+5. **Real-time formatting**: StreamingMessageBubble now uses identical formatting to MessageBubble for consistent rendering during streaming
 
 ### Performance Optimizations Applied
 - Database operations made non-blocking during streaming
 - Optimized chunk processing with buffer management
 - Client-side message IDs generated for immediate display
 - Reduced database query overhead in conversation validation
+- **Consistent formatting**: Eliminated visual jumps between streaming and completed messages
+
+### Font System Architecture
+The application uses a sophisticated font system with Next.js optimization and cross-device persistence:
+
+#### **Available Fonts:**
+- **Geist Sans**: Modern, clean default font
+- **Serif**: Traditional serif fallback
+- **JetBrains Mono**: Code-friendly monospace
+- **Playfair Display**: Elegant, sophisticated serif for literary feel
+- **Poppins**: Geometric, friendly sans-serif with rounded characters
+- **Crimson Text**: Classical serif designed for book typography
+
+#### **Font Loading & Persistence:**
+- **Next.js Integration**: Fonts loaded via `next/font/google` for optimization
+- **Priority-based Loading**: localStorage takes precedence over database for new fonts
+- **Cross-device Sync**: Database stores compatible mappings for basic synchronization
+- **Legacy Compatibility**: Automatic migration from old font selections
+- **Theme Script**: Immediate font application to prevent flash during page load
+
+#### **Technical Implementation:**
+```typescript
+// Font types in FontContext.tsx
+type FontFamily = 'sans' | 'serif' | 'mono' | 'playfair' | 'poppins' | 'crimson';
+
+// Database compatibility mapping for new fonts
+const dbCompatibleFonts = {
+  'playfair': 'serif',  // Maps to serif for database storage
+  'poppins': 'sans',    // Maps to sans for database storage  
+  'crimson': 'serif'    // Maps to serif for database storage
+};
+```
+
+#### **Font System Features:**
+- **Real-time Preview**: Font previews in settings use actual font styling
+- **CSS Variables**: Fonts defined as CSS custom properties for theme system
+- **Global Application**: Font changes apply immediately to entire application
+- **Fallback Strategy**: Multiple layers of fallback (localStorage → database → defaults)
+
+### UI/UX Improvements
+
+#### **Sidebar Conversation Management (`Sidebar.tsx`)**:
+- **Hover-based Actions**: Edit and delete buttons appear on conversation hover without requiring clicks
+- **Overlay Design**: Action buttons overlay conversation titles with gradient background for clean appearance
+- **Full-width Titles**: Conversation titles extend to full sidebar width for better space utilization
+- **Smart Background**: Gradient overlays match conversation selection state (primary vs muted themes)
+
+#### **Chain of Thought Display (`CollapsibleThinking.tsx`)**:
+- **Simplified Design**: Clean, minimal header with chevron icon and "Reasoning" label
+- **Smart Expansion**: Uses `ChevronRight` when collapsed, `ChevronDown` when expanded
+- **Auto-collapse**: Automatically collapses 1 second after reasoning completion
+- **Reduced Spacing**: Optimized spacing between reasoning section and message content
+
+#### **Settings Interface (`SettingsDialog.tsx`)**:
+- **Streamlined Tabs**: Removed Visual Options tab for cleaner interface
+- **Accessibility**: Added proper `DialogDescription` for screen reader compatibility
+- **Font Variety**: Enhanced font selection with distinctive typeface options
+- **Real-time Previews**: Font selection shows actual font rendering in preview
 
 ### LLM Provider Integration
 The `@orion-chat/llm-adapters` package provides unified interface for:
@@ -346,3 +405,17 @@ const searchFunction = {
 - **Anthropic timeouts**: Upload includes retry logic (3 attempts with exponential backoff)
 - **Progress tracking**: Uses XMLHttpRequest for real progress vs simulated progress
 - **Provider name mismatch**: Ensure provider constants match API expectations ('google' not 'google-ai')
+
+### Font System Troubleshooting
+- **Font not persisting after refresh**: Fixed by priority-based loading (localStorage overrides database for new fonts)
+- **Database constraint errors**: New fonts map to compatible values (`playfair`→`serif`, `poppins`→`sans`, `crimson`→`serif`)
+- **Theme script errors**: Added safety checks for `document.body` availability during SSR
+- **Font loading failures**: Next.js font optimization ensures proper loading and fallbacks
+- **Cross-device font sync**: Database stores mapped values while localStorage preserves specific font choices
+- **Legacy font migration**: Automatic mapping from old font names (`inter`→`sans`, `roboto`→`poppins`, `opensans`→`poppins`)
+
+### UI Component Troubleshooting
+- **Sidebar action buttons not visible**: Ensure gradient backgrounds match conversation state classes
+- **Reasoning section spacing issues**: Verify `mb-2` spacing and proper auto-collapse timing
+- **Settings accessibility warnings**: Ensure `DialogDescription` is included for screen readers
+- **Font preview not working**: Check CSS variables and font-preview class definitions in globals.css

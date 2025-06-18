@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, MessageSquare, MoreHorizontal, Trash2, Edit3, Menu, Search, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Plus, MessageSquare, Trash2, Edit3, Menu, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button-wrapper";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,6 @@ export function Sidebar({
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [showActionsId, setShowActionsId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, signOut } = useAuth();
 
@@ -62,17 +61,6 @@ export function Sidebar({
     conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Close action buttons when clicking outside
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowActionsId(null);
-    };
-    
-    if (showActionsId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showActionsId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -192,72 +180,55 @@ export function Sidebar({
                   )}
                   onClick={() => {
                     if (!isEditing) {
-                      setShowActionsId(null);
                       onConversationSelect(conversation);
                     }
                   }}
                 >
-                  <div className="flex items-center gap-1 w-full">
-                    <div className="flex-1 min-w-0">
-                      {isEditing ? (
-                        <Input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleSaveEdit}
-                          className="h-7 text-sm"
-                          autoFocus
-                        />
-                      ) : (
-                        <h3 className="text-sm truncate py-1">
+                  <div className="relative w-full">
+                    {isEditing ? (
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onBlur={handleSaveEdit}
+                        className="h-7 text-sm"
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        <h3 className="text-sm py-1 truncate">
                           {conversation.title}
                         </h3>
-                      )}
-                    </div>
-
-                    {!isEditing && (
-                      <div className="flex items-center gap-1">
-                        {showActionsId === conversation.id ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartEdit(conversation);
-                                setShowActionsId(null);
-                              }}
-                            >
-                              <Edit3 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteConversation(conversation.id);
-                                setShowActionsId(null);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </>
-                        ) : (
+                        <div className={cn(
+                          "absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 pl-8",
+                          isSelected 
+                            ? "bg-gradient-to-l from-primary/15 from-70% to-transparent" 
+                            : "bg-gradient-to-l from-card from-70% to-transparent"
+                        )}>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setShowActionsId(conversation.id);
+                              handleStartEdit(conversation);
                             }}
                           >
-                            <MoreHorizontal className="h-3 w-3" />
+                            <Edit3 className="h-3 w-3" />
                           </Button>
-                        )}
-                      </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteConversation(conversation.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>

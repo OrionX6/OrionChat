@@ -47,9 +47,6 @@
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-jetbrains-mono);
-  --font-inter: var(--font-inter);
-  --font-roboto: var(--font-roboto);
-  --font-open-sans: var(--font-open-sans);
 }
 
 
@@ -77,28 +74,28 @@ body.font-mono * {
   font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 }
 
-body.font-inter,
-body.font-inter * {
-  font-family: var(--font-inter), system-ui, sans-serif !important;
+body.font-playfair,
+body.font-playfair * {
+  font-family: var(--font-playfair), serif !important;
 }
 
-body.font-roboto,
-body.font-roboto * {
-  font-family: var(--font-roboto), system-ui, sans-serif !important;
+body.font-poppins,
+body.font-poppins * {
+  font-family: var(--font-poppins), sans-serif !important;
 }
 
-body.font-opensans,
-body.font-opensans * {
-  font-family: var(--font-open-sans), system-ui, sans-serif !important;
+body.font-crimson,
+body.font-crimson * {
+  font-family: var(--font-crimson), serif !important;
 }
 
 /* Font preview classes - maximum specificity to override global font settings */
 body.font-sans .font-preview-sans,
 body.font-serif .font-preview-sans,
 body.font-mono .font-preview-sans,
-body.font-inter .font-preview-sans,
-body.font-roboto .font-preview-sans,
-body.font-opensans .font-preview-sans,
+body.font-playfair .font-preview-sans,
+body.font-poppins .font-preview-sans,
+body.font-crimson .font-preview-sans,
 body .font-preview-sans {
   font-family: var(--font-geist-sans), system-ui, sans-serif !important;
 }
@@ -106,9 +103,9 @@ body .font-preview-sans {
 body.font-sans .font-preview-serif,
 body.font-serif .font-preview-serif,
 body.font-mono .font-preview-serif,
-body.font-inter .font-preview-serif,
-body.font-roboto .font-preview-serif,
-body.font-opensans .font-preview-serif,
+body.font-playfair .font-preview-serif,
+body.font-poppins .font-preview-serif,
+body.font-crimson .font-preview-serif,
 body .font-preview-serif {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
 }
@@ -116,41 +113,41 @@ body .font-preview-serif {
 body.font-sans .font-preview-mono,
 body.font-serif .font-preview-mono,
 body.font-mono .font-preview-mono,
-body.font-inter .font-preview-mono,
-body.font-roboto .font-preview-mono,
-body.font-opensans .font-preview-mono,
+body.font-playfair .font-preview-mono,
+body.font-poppins .font-preview-mono,
+body.font-crimson .font-preview-mono,
 body .font-preview-mono {
   font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace !important;
 }
 
-body.font-sans .font-preview-inter,
-body.font-serif .font-preview-inter,
-body.font-mono .font-preview-inter,
-body.font-inter .font-preview-inter,
-body.font-roboto .font-preview-inter,
-body.font-opensans .font-preview-inter,
-body .font-preview-inter {
-  font-family: var(--font-inter), system-ui, sans-serif !important;
+body.font-sans .font-preview-playfair,
+body.font-serif .font-preview-playfair,
+body.font-mono .font-preview-playfair,
+body.font-playfair .font-preview-playfair,
+body.font-poppins .font-preview-playfair,
+body.font-crimson .font-preview-playfair,
+body .font-preview-playfair {
+  font-family: var(--font-playfair), serif !important;
 }
 
-body.font-sans .font-preview-roboto,
-body.font-serif .font-preview-roboto,
-body.font-mono .font-preview-roboto,
-body.font-inter .font-preview-roboto,
-body.font-roboto .font-preview-roboto,
-body.font-opensans .font-preview-roboto,
-body .font-preview-roboto {
-  font-family: var(--font-roboto), system-ui, sans-serif !important;
+body.font-sans .font-preview-poppins,
+body.font-serif .font-preview-poppins,
+body.font-mono .font-preview-poppins,
+body.font-playfair .font-preview-poppins,
+body.font-poppins .font-preview-poppins,
+body.font-crimson .font-preview-poppins,
+body .font-preview-poppins {
+  font-family: var(--font-poppins), sans-serif !important;
 }
 
-body.font-sans .font-preview-opensans,
-body.font-serif .font-preview-opensans,
-body.font-mono .font-preview-opensans,
-body.font-inter .font-preview-opensans,
-body.font-roboto .font-preview-opensans,
-body.font-opensans .font-preview-opensans,
-body .font-preview-opensans {
-  font-family: var(--font-open-sans), system-ui, sans-serif !important;
+body.font-sans .font-preview-crimson,
+body.font-serif .font-preview-crimson,
+body.font-mono .font-preview-crimson,
+body.font-playfair .font-preview-crimson,
+body.font-poppins .font-preview-crimson,
+body.font-crimson .font-preview-crimson,
+body .font-preview-crimson {
+  font-family: var(--font-crimson), serif !important;
 }
 
 /* Hide Next.js development mode indicators */
