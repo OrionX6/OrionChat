@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { getModifierKey, isPlatformMac } from "@/hooks/useKeyboardShortcuts";
 import { useMessageUsage } from "@/hooks/useMessageUsage";
 import { useTheme, type ColorTheme, type BaseTheme } from "@/contexts/ThemeContext";
 import { useFont, type FontFamily } from "@/contexts/FontContext";
@@ -96,9 +97,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
 
   const [shortcuts] = useState([
-    { action: "Search", shortcut: "⌘ K" },
-    { action: "New Chat", shortcut: "⌘ Shift O" },
-    { action: "Toggle Sidebar", shortcut: "⌘ B" }
+    { action: "Search", shortcut: `${getModifierKey()} K` },
+    { action: "New Chat", shortcut: `${getModifierKey()} Shift O` },
+    { action: "Toggle Sidebar", shortcut: `${getModifierKey()} B` }
   ]);
 
   // Helper function to get model styling

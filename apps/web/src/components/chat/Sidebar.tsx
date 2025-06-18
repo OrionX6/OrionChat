@@ -20,6 +20,7 @@ interface SidebarProps {
   loading?: boolean;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function Sidebar({
@@ -32,6 +33,7 @@ export function Sidebar({
   loading = false,
   isCollapsed = false,
   onToggleCollapse,
+  searchInputRef,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -131,6 +133,7 @@ export function Sidebar({
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             placeholder="Search your threads..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

@@ -13,6 +13,7 @@ import { useMessageLimit } from "@/contexts/MessageLimitContext";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_MODEL, ModelProvider, AVAILABLE_MODELS } from "@/lib/constants/models";
 import { useDefaultModel } from "@/hooks/useDefaultModel";
+import { useKeyboardShortcuts, type KeyboardShortcut } from "@/hooks/useKeyboardShortcuts";
 import type { Database } from "@/lib/types/database";
 
 // Extended types to match actual database schema
@@ -72,9 +73,26 @@ export function ChatWindow() {
   const { defaultModelName } = useDefaultModel();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Create supabase client once
   const supabase = useMemo(() => createClient(), []);
+
+  // Focus search input function
+  const focusSearch = useCallback(() => {
+    if (sidebarCollapsed) {
+      // If sidebar is collapsed, expand it first
+      setSidebarCollapsed(false);
+      // Use setTimeout to ensure the search input is rendered before focusing
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
+    } else if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [sidebarCollapsed]);
 
   // Load conversations on mount
   useEffect(() => {
@@ -411,6 +429,34 @@ export function ChatWindow() {
       createNewConversation(DEFAULT_MODEL.provider, DEFAULT_MODEL.name);
     }
   }, [defaultModelName]);
+
+  // Keyboard shortcuts configuration
+  const shortcuts: KeyboardShortcut[] = useMemo(() => [
+    {
+      action: 'search',
+      key: 'k',
+      mac: '⌘K',
+      windows: 'Ctrl+K',
+      handler: focusSearch,
+    },
+    {
+      action: 'new-chat',
+      key: 'o',
+      mac: '⌘⇧O',
+      windows: 'Ctrl+Shift+O',
+      handler: handleNewConversation,
+    },
+    {
+      action: 'toggle-sidebar',
+      key: 'b',
+      mac: '⌘B',
+      windows: 'Ctrl+B',
+      handler: () => setSidebarCollapsed(prev => !prev),
+    },
+  ], [focusSearch, handleNewConversation]);
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts(shortcuts);
 
   const handleModelChange = async (provider: ModelProvider, modelName: string) => {
     // If no conversation exists, just update the selected model for future use
@@ -837,6 +883,7 @@ export function ChatWindow() {
         loading={conversationsLoading}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        searchInputRef={searchInputRef}
       />
 
       <div className="flex-1 flex flex-col relative">
