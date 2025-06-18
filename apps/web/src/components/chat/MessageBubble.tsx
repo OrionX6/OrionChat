@@ -3,6 +3,7 @@
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -149,7 +150,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
           ) : (
             <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
               <ReactMarkdown
-                remarkPlugins={[remarkMath]}
+                remarkPlugins={[remarkMath, remarkGfm]}
                 rehypePlugins={[rehypeKatex]}
                 components={{
                   code({ node, inline, className, children, ...props }: any) {
@@ -203,6 +204,38 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                   },
                   hr({ }: any) {
                     return <hr className="border-border my-4" />;
+                  },
+                  table({ children }: any) {
+                    return (
+                      <div className="overflow-x-auto my-4 max-w-full">
+                        <table className="min-w-full border-collapse border border-border rounded-md">
+                          {children}
+                        </table>
+                      </div>
+                    );
+                  },
+                  thead({ children }: any) {
+                    return <thead className="bg-muted/50">{children}</thead>;
+                  },
+                  tbody({ children }: any) {
+                    return <tbody>{children}</tbody>;
+                  },
+                  tr({ children }: any) {
+                    return <tr className="border-b border-border">{children}</tr>;
+                  },
+                  th({ children }: any) {
+                    return (
+                      <th className="border border-border px-3 py-2 text-left font-semibold text-sm bg-muted/30 max-w-xs overflow-hidden text-ellipsis">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }: any) {
+                    return (
+                      <td className="border border-border px-3 py-2 text-sm max-w-xs overflow-hidden text-ellipsis">
+                        {children}
+                      </td>
+                    );
                   },
                 }}
               >

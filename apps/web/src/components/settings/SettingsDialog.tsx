@@ -24,16 +24,18 @@ import { useFont, type FontFamily } from "@/contexts/FontContext";
 import { useEnabledModels } from "@/contexts/EnabledModelsContext";
 import { AVAILABLE_MODELS } from "@/lib/constants/models";
 import { useDefaultModel } from "@/hooks/useDefaultModel";
+import { useUserAttachments } from "@/hooks/useUserAttachments";
 import {
   User,
   Palette,
   Zap,
-  Key,
   Link,
   Contact,
-  Eye,
   BarChart3,
-  Keyboard
+  Keyboard,
+  Trash2,
+  ExternalLink,
+  Check
 } from "lucide-react";
 
 interface SettingsDialogProps {
@@ -48,6 +50,20 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { fontFamily, setFontFamily } = useFont();
   const { isModelEnabled, toggleModel, enabledModels, getEnabledModels } = useEnabledModels();
   const { defaultModelName, setDefaultModel } = useDefaultModel();
+  const { 
+    attachments, 
+    loading: attachmentsLoading, 
+    selectedCount, 
+    isSelected, 
+    isAllSelected, 
+    toggleSelection, 
+    selectAll, 
+    clearSelection, 
+    deleteAttachment, 
+    deleteAttachments, 
+    formatFileSize, 
+    getFileIcon 
+  } = useUserAttachments();
   const [activeTab, setActiveTab] = useState("account");
   
   // Mock user data - in real app, this would come from your user profile service
@@ -176,13 +192,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 >
                   <Zap className="h-5 w-5" />
                   Models
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="api-keys" 
-                  className="w-full justify-start gap-3 px-4 py-3 rounded-lg text-left font-medium transition-all hover:bg-muted/50 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/50"
-                >
-                  <Key className="h-5 w-5" />
-                  API Keys
                 </TabsTrigger>
                 <TabsTrigger 
                   value="attachments" 
@@ -567,182 +576,133 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 </div>
               </TabsContent>
 
-              <TabsContent value="api-keys" className="m-0 p-8">
-                <div className="space-y-8">
-                  <Card className="overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/20 dark:to-blue-950/20">
-                      <CardTitle className="flex items-center gap-2">
-                        <Key className="h-5 w-5" />
-                        API Keys
-                      </CardTitle>
-                      <CardDescription>
-                        Securely manage your API keys for different AI providers
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-8 p-8">
-                      <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-lg">
-                        <p className="text-sm text-amber-900 dark:text-amber-100">
-                          🔒 Your API keys are encrypted and stored securely. They are only used to make requests to the respective AI providers.
-                        </p>
-                      </div>
-
-                      <div className="space-y-6">
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                            OpenAI API Key
-                          </Label>
-                          <div className="flex gap-3">
-                            <Input 
-                              type="password" 
-                              placeholder="sk-..." 
-                              className="flex-1 h-12 text-base border-2 focus:border-primary"
-                            />
-                            <Button variant="outline" size="lg" className="px-4">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Required for GPT-4o Mini. Get your key from platform.openai.com
-                          </p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                            Anthropic API Key
-                          </Label>
-                          <div className="flex gap-3">
-                            <Input 
-                              type="password" 
-                              placeholder="sk-ant-..." 
-                              className="flex-1 h-12 text-base border-2 focus:border-primary"
-                            />
-                            <Button variant="outline" size="lg" className="px-4">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Required for Claude 3.5 Haiku. Get your key from console.anthropic.com
-                          </p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            Google AI API Key
-                          </Label>
-                          <div className="flex gap-3">
-                            <Input 
-                              type="password" 
-                              placeholder="AIza..." 
-                              className="flex-1 h-12 text-base border-2 focus:border-primary"
-                            />
-                            <Button variant="outline" size="lg" className="px-4">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Required for Gemini models. Get your key from aistudio.google.com
-                          </p>
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                            DeepSeek API Key
-                          </Label>
-                          <div className="flex gap-3">
-                            <Input 
-                              type="password" 
-                              placeholder="sk-..." 
-                              className="flex-1 h-12 text-base border-2 focus:border-primary"
-                            />
-                            <Button variant="outline" size="lg" className="px-4">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Required for DeepSeek R1. Get your key from platform.deepseek.com
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="pt-6 border-t border-border/50">
-                        <Button className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
-                          Save API Keys
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
 
               <TabsContent value="attachments" className="m-0 p-8">
-                <div className="space-y-8">
-                  <Card className="overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20">
-                      <CardTitle className="flex items-center gap-2">
-                        <Link className="h-5 w-5" />
-                        Attachments
-                      </CardTitle>
-                      <CardDescription>
-                        Configure file upload and attachment settings
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-8 p-8">
-                      <div className="flex items-start justify-between p-4 rounded-lg border bg-gradient-to-r from-muted/30 to-muted/10 hover:from-muted/40 hover:to-muted/20 transition-all">
-                        <div className="flex-1">
-                          <Label className="text-base font-medium">Enable File Uploads</Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Allow uploading images and PDFs to conversations
-                          </p>
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Attachments</h2>
+                    <p className="text-muted-foreground mt-2">
+                      Manage your uploaded files and attachments. Note that deleting files here will remove them from the relevant threads, but not delete the threads. This may lead to unexpected behavior if you delete a file that is still being used in a thread.
+                    </p>
+                  </div>
+
+                  {/* Selection Controls */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          onChange={isAllSelected ? clearSelection : selectAll}
+                          className="w-4 h-4 rounded border-2 border-muted-foreground focus:ring-2 focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium">Select All</span>
+                      </label>
+                      {selectedCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearSelection}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          Clear Selection
+                        </Button>
+                      )}
+                    </div>
+                    {selectedCount > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={deleteAttachments}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Selected ({selectedCount})
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Attachments List */}
+                  <div className="space-y-2">
+                    {attachmentsLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                          <p className="text-muted-foreground">Loading attachments...</p>
                         </div>
-                        <Switch defaultChecked className="ml-4" />
                       </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium">Maximum File Size (MB)</Label>
-                          <Input 
-                            type="number" 
-                            defaultValue="32" 
-                            className="h-12 text-base border-2 focus:border-primary"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Files larger than this size will be rejected during upload
-                          </p>
+                    ) : attachments.length === 0 ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Link className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                          <p className="text-muted-foreground">No attachments found</p>
+                          <p className="text-sm text-muted-foreground/70">Files you upload will appear here</p>
                         </div>
+                      </div>
+                    ) : (
+                      attachments.map((file) => (
+                        <div
+                          key={file.id}
+                          className={`flex items-center gap-4 p-4 rounded-lg border hover:bg-muted/30 transition-colors ${
+                            isSelected(file.id) ? 'bg-primary/5 border-primary/20' : 'bg-background'
+                          }`}
+                        >
+                          {/* Checkbox */}
+                          <input
+                            type="checkbox"
+                            checked={isSelected(file.id)}
+                            onChange={() => toggleSelection(file.id)}
+                            className="w-4 h-4 rounded border-2 border-muted-foreground focus:ring-2 focus:ring-primary"
+                          />
 
-                        <div className="space-y-3">
-                          <Label className="text-base font-medium">Allowed File Types</Label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-700">
-                              <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">Images</h4>
-                              <div className="flex flex-wrap gap-1">
-                                <Badge variant="outline" className="text-xs border-green-300 dark:border-green-600 text-green-800 dark:text-green-200">PNG</Badge>
-                                <Badge variant="outline" className="text-xs border-green-300 dark:border-green-600 text-green-800 dark:text-green-200">JPG</Badge>
-                                <Badge variant="outline" className="text-xs border-green-300 dark:border-green-600 text-green-800 dark:text-green-200">WebP</Badge>
-                                <Badge variant="outline" className="text-xs border-green-300 dark:border-green-600 text-green-800 dark:text-green-200">GIF</Badge>
-                              </div>
+                          {/* File Icon */}
+                          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted/50">
+                            <span className="text-lg">{getFileIcon(file.mime_type)}</span>
+                          </div>
+
+                          {/* File Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium truncate">{file.original_name}</h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-muted-foreground/20"
+                                onClick={() => {
+                                  // Open file in new tab - you'll need to implement the URL generation
+                                  // based on your storage setup (Supabase storage URL)
+                                  window.open(`/api/files/${file.id}`, '_blank');
+                                }}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
                             </div>
-                            <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-700">
-                              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Documents</h4>
-                              <div className="flex flex-wrap gap-1">
-                                <Badge variant="outline" className="text-xs border-blue-300 dark:border-blue-600 text-blue-800 dark:text-blue-200">PDF</Badge>
-                              </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <span>{file.mime_type}</span>
+                              <span>•</span>
+                              <span>{formatFileSize(file.file_size)}</span>
+                              {file.created_at && (
+                                <>
+                                  <span>•</span>
+                                  <span>{new Date(file.created_at).toLocaleDateString()}</span>
+                                </>
+                              )}
                             </div>
                           </div>
-                        </div>
 
-                        <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-700 rounded-lg">
-                          <p className="text-sm text-blue-900 dark:text-blue-100">
-                            📎 Supported features: Vision analysis for images, text extraction and Q&A for PDFs
-                          </p>
+                          {/* Individual Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteAttachment(file.id)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      ))
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 

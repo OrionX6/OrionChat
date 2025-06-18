@@ -216,11 +216,58 @@ export async function POST(request: NextRequest) {
       googleServiceAccountKeyPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
     });
 
-    // Process attachments for the latest user message if they exist
-    let processedAttachments: AttachmentContent[] = [];
-    if (attachments && attachments.length > 0) {
-      processedAttachments = await processAttachments(attachments, supabase, provider);
+    // Fetch all attachments from the conversation for context continuity
+    console.log('🔍 Fetching all attachments from conversation:', conversationId);
+    const { data: conversationMessages, error: messagesError } = await supabase
+      .from('messages')
+      .select('attachments')
+      .eq('conversation_id', conversationId)
+      .eq('role', 'user')
+      .not('attachments', 'is', null);
+
+    // Collect all unique attachments from the conversation
+    const allConversationAttachments: FileAttachment[] = [];
+    const seenAttachmentIds = new Set<string>();
+    
+    if (!messagesError && conversationMessages) {
+      for (const message of conversationMessages) {
+        if (message.attachments) {
+          try {
+            const messageAttachments = typeof message.attachments === 'string' 
+              ? JSON.parse(message.attachments) 
+              : message.attachments;
+            
+            // Deduplicate attachments by ID
+            for (const attachment of messageAttachments) {
+              if (!seenAttachmentIds.has(attachment.id)) {
+                seenAttachmentIds.add(attachment.id);
+                allConversationAttachments.push(attachment);
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing message attachments:', error);
+          }
+        }
+      }
     }
+
+    // Process current message attachments
+    let currentMessageAttachments: AttachmentContent[] = [];
+    if (attachments && attachments.length > 0) {
+      currentMessageAttachments = await processAttachments(attachments, supabase, provider);
+    }
+
+    // Process all conversation attachments for context
+    let conversationAttachmentsProcessed: AttachmentContent[] = [];
+    if (allConversationAttachments.length > 0) {
+      conversationAttachmentsProcessed = await processAttachments(allConversationAttachments, supabase, provider);
+    }
+
+    console.log('📎 Attachment summary:', {
+      currentMessage: currentMessageAttachments.length,
+      conversationTotal: conversationAttachmentsProcessed.length,
+      provider
+    });
 
     // Convert messages to the format expected by LLM providers
     const chatMessages: ChatMessage[] = messages.map((msg: { role: 'user' | 'assistant' | 'system'; content: string; metadata?: Record<string, unknown> }, index: number) => {
@@ -230,16 +277,33 @@ export async function POST(request: NextRequest) {
         metadata: msg.metadata || {}
       };
 
-      // Add multimodal content to the last user message if attachments exist
-      if (msg.role === 'user' && index === messages.length - 1 && processedAttachments.length > 0) {
-        // Check if the provider supports multimodal content
-        const supportsMultimodal = provider === 'openai' || provider === 'google' || provider === 'anthropic';
+      // Add multimodal content to user messages with proper attachment context
+      if (msg.role === 'user') {
+        // For the latest message, use current attachments + unique conversation attachments for context
+        // For older messages, include conversation attachments for full context
+        let attachmentsToInclude: AttachmentContent[] = [];
         
-        if (supportsMultimodal) {
-          // For multimodal providers, format as structured content array
-          const multimodalContent: MultimodalContent[] = [
-            { type: 'text', text: msg.content },
-            ...processedAttachments.map((attachment): MultimodalContent => {
+        if (index === messages.length - 1) {
+          // Latest message: current attachments take priority, supplement with conversation context
+          const seenIds = new Set(currentMessageAttachments.map(a => a.file_id || a.file_uri || ''));
+          attachmentsToInclude = [
+            ...currentMessageAttachments,
+            ...conversationAttachmentsProcessed.filter(a => !seenIds.has(a.file_id || a.file_uri || ''))
+          ];
+        } else {
+          // Older messages: include conversation attachments for context
+          attachmentsToInclude = conversationAttachmentsProcessed;
+        }
+
+        if (attachmentsToInclude.length > 0) {
+          // Check if the provider supports multimodal content
+          const supportsMultimodal = provider === 'openai' || provider === 'google' || provider === 'anthropic';
+          
+          if (supportsMultimodal) {
+            // For multimodal providers, format as structured content array
+            const multimodalContent: MultimodalContent[] = [
+              { type: 'text', text: msg.content },
+              ...attachmentsToInclude.map((attachment): MultimodalContent => {
               if (attachment.type === 'image_url') {
                 console.log('Adding image URL to multimodal content:', attachment.image_url?.url);
                 return {
@@ -317,30 +381,31 @@ export async function POST(request: NextRequest) {
             metadata: { 
               ...baseMessage.metadata, 
               hasAttachments: true,
-              attachmentTypes: processedAttachments.map(a => a.type)
+              attachmentTypes: attachmentsToInclude.map(a => a.type)
             }
           };
-        } else {
-          // For text-only providers, append PDF content as text
-          let textContent = msg.content;
-          processedAttachments.forEach(attachment => {
-            if (attachment.type === 'pdf' && attachment.pdf_content) {
-              textContent += `\n\n[PDF Content from ${attachments.find((a: FileAttachment) => a.type === 'application/pdf')?.name}]:\n${attachment.pdf_content}`;
-            } else if (attachment.type === 'image_url' || attachment.type === 'image_base64') {
-              textContent += `\n\n[Image attached: ${attachments.find((a: FileAttachment) => a.type.startsWith('image/'))?.name}]`;
-            }
-          });
-          
-          return {
-            ...baseMessage,
-            content: textContent,
-            metadata: { 
-              ...baseMessage.metadata, 
-              hasAttachments: true,
-              attachmentTypes: processedAttachments.map(a => a.type),
-              textOnlyFallback: true
-            }
-          };
+          } else {
+            // For text-only providers, append PDF content as text
+            let textContent = msg.content;
+            attachmentsToInclude.forEach(attachment => {
+              if (attachment.type === 'pdf' && attachment.pdf_content) {
+                textContent += `\n\n[PDF Content from uploaded file]:\n${attachment.pdf_content}`;
+              } else if (attachment.type === 'image_url' || attachment.type === 'image_base64') {
+                textContent += `\n\n[Image attached: uploaded image file]`;
+              }
+            });
+            
+            return {
+              ...baseMessage,
+              content: textContent,
+              metadata: { 
+                ...baseMessage.metadata, 
+                hasAttachments: true,
+                attachmentTypes: attachmentsToInclude.map(a => a.type),
+                textOnlyFallback: true
+              }
+            };
+          }
         }
       }
 
@@ -391,17 +456,17 @@ export async function POST(request: NextRequest) {
           
           // Stream the response from the LLM
           for await (const chunk of router.stream({
-            messages: chatMessages,
-            provider: actualProvider as 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek',
-            model,
-            userId: user.id,
-            conversationId,
-            options: {
-              maxTokens: maxTokensUsed, // Use high default to accommodate full model capabilities
-              temperature: conversation.temperature || 0.7,
-              webSearch: webSearch && conversation.is_web_search_enabled && (actualProvider === 'google-vertex' || actualProvider === 'deepseek'),
-            }
-          })) {
+              messages: chatMessages,
+              provider: actualProvider as 'openai' | 'anthropic' | 'google' | 'google-vertex' | 'deepseek',
+              model,
+              userId: user.id,
+              conversationId,
+              options: {
+                maxTokens: maxTokensUsed, // Use high default to accommodate full model capabilities
+                temperature: conversation.temperature || 0.7,
+                webSearch: webSearch && conversation.is_web_search_enabled && (actualProvider === 'google-vertex' || actualProvider === 'deepseek'),
+              }
+            })) {
             fullResponse += chunk.content;
             tokenCount += 1;
             
@@ -472,9 +537,44 @@ export async function POST(request: NextRequest) {
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
+          
+          // Parse and provide user-friendly error messages
+          let userFriendlyMessage = 'An error occurred while processing your request.';
+          
+          if (error instanceof Error) {
+            const errorMessage = error.message.toLowerCase();
+            
+            // Handle specific Claude API errors
+            if (errorMessage.includes('maximum of 100 pdf pages')) {
+              userFriendlyMessage = 'The PDF you uploaded has more than 100 pages, which exceeds Claude\'s limit. Please upload a shorter PDF or split it into smaller documents.';
+            } else if (errorMessage.includes('pdf') && errorMessage.includes('maximum')) {
+              userFriendlyMessage = 'The PDF file exceeds Claude\'s processing limits. Please try a smaller or shorter PDF document.';
+            } else if (errorMessage.includes('file too large') || errorMessage.includes('maximum file size')) {
+              userFriendlyMessage = 'The uploaded file is too large. Please try uploading a smaller file.';
+            } else if (errorMessage.includes('unsupported file type') || errorMessage.includes('invalid file format')) {
+              userFriendlyMessage = 'The file format is not supported. Please upload a PDF, PNG, JPG, GIF, or WebP file.';
+            } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+              userFriendlyMessage = 'You\'re sending requests too quickly. Please wait a moment before trying again.';
+            } else if (errorMessage.includes('context length') || errorMessage.includes('token limit')) {
+              userFriendlyMessage = 'The conversation or uploaded content is too long. Please start a new conversation or upload smaller files.';
+            } else if (errorMessage.includes('authentication') || errorMessage.includes('unauthorized')) {
+              userFriendlyMessage = 'Authentication error. Please refresh the page and try again.';
+            } else if (errorMessage.includes('invalid request') || errorMessage.includes('bad request')) {
+              userFriendlyMessage = 'There was an issue with your request. Please check your input and try again.';
+            } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+              userFriendlyMessage = 'Network connection error. Please check your internet connection and try again.';
+            } else {
+              // For unknown errors, show the actual error message if it seems user-friendly
+              if (error.message.length < 200 && !errorMessage.includes('stack') && !errorMessage.includes('undefined')) {
+                userFriendlyMessage = error.message;
+              }
+            }
+          }
+          
           const errorData = JSON.stringify({
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
-            done: true
+            error: userFriendlyMessage,
+            done: true,
+            isError: true
           });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
           controller.close();

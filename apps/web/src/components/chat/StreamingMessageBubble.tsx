@@ -3,6 +3,7 @@
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
 
@@ -27,6 +28,24 @@ function preprocessMathContent(content: string): string {
 
 function parseStreamingContent(content: string) {
   if (!content) return [];
+
+  // For streaming content, we need to be more careful about parsing
+  // Check if content contains table markers - be more specific to avoid false positives
+  const lines = content.split('\n');
+  const hasTableStructure = lines.some(line => {
+    // Look for lines that have pipes and align with table headers
+    const pipesCount = (line.match(/\|/g) || []).length;
+    return pipesCount >= 2; // At least start and end pipes plus content
+  });
+  
+  const hasSeparatorLine = lines.some(line => 
+    /^\s*\|[\s-:|]+\|\s*$/.test(line) // Table separator line
+  );
+  
+  // If it looks like a table, treat as text and let ReactMarkdown handle it
+  if (hasTableStructure || hasSeparatorLine) {
+    return [{ type: 'text' as const, content, isComplete: false }];
+  }
 
   const parts: Array<{ type: 'text' | 'code'; content: string; language?: string; isComplete: boolean }> = [];
   let lastIndex = 0;
@@ -162,7 +181,7 @@ export const StreamingMessageBubble = memo(function StreamingMessageBubble({ con
                 <div key={index} className={`${contentParts.some(part => part.type === 'code') ? 'px-4 py-3' : ''} relative`}>
                   <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
                     <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
+                      remarkPlugins={[remarkMath, remarkGfm]}
                       rehypePlugins={[rehypeKatex]}
                       components={{
                         code({ node, inline, className, children, ...props }: any) {
@@ -216,6 +235,38 @@ export const StreamingMessageBubble = memo(function StreamingMessageBubble({ con
                         },
                         hr({ }: any) {
                           return <hr className="border-border my-4" />;
+                        },
+                        table({ children }: any) {
+                          return (
+                            <div className="overflow-x-auto my-4 max-w-full">
+                              <table className="min-w-full border-collapse border border-border rounded-md">
+                                {children}
+                              </table>
+                            </div>
+                          );
+                        },
+                        thead({ children }: any) {
+                          return <thead className="bg-muted/50">{children}</thead>;
+                        },
+                        tbody({ children }: any) {
+                          return <tbody>{children}</tbody>;
+                        },
+                        tr({ children }: any) {
+                          return <tr className="border-b border-border">{children}</tr>;
+                        },
+                        th({ children }: any) {
+                          return (
+                            <th className="border border-border px-3 py-2 text-left font-semibold text-sm bg-muted/30 max-w-xs overflow-hidden text-ellipsis">
+                              {children}
+                            </th>
+                          );
+                        },
+                        td({ children }: any) {
+                          return (
+                            <td className="border border-border px-3 py-2 text-sm max-w-xs overflow-hidden text-ellipsis">
+                              {children}
+                            </td>
+                          );
                         },
                       }}
                     >

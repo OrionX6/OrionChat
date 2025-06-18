@@ -111,14 +111,55 @@ export function ChatWindow() {
   }, [defaultModelName, currentConversation]);
 
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current && messagesContainerRef.current) {
+      try {
+        // Ensure the container is scrollable and hasn't been corrupted
+        const container = messagesContainerRef.current;
+        const containerHeight = container.clientHeight;
+        const scrollHeight = container.scrollHeight;
+        
+        // Safety check - if something seems wrong with the layout, log it
+        if (containerHeight <= 0 || scrollHeight <= 0) {
+          console.warn('⚠️ Container dimensions seem incorrect:', { containerHeight, scrollHeight });
+        }
+        
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      } catch (error) {
+        console.error('Error scrolling to bottom:', error);
+        // Fallback: try scrolling the container directly
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      }
     }
   }, []);
 
   const handleTypingChange = (typing: boolean) => {
     setIsTyping(typing);
   };
+
+  // Recovery mechanism - reset scroll position if layout seems broken
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Shift + R to reset layout
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        console.log('🔧 Layout recovery triggered');
+        
+        // Reset scroll position
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = 0;
+          setTimeout(() => scrollToBottom(), 100);
+        }
+        
+        // Force re-render
+        setMessages(prev => [...prev]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [scrollToBottom]);
 
   const loadConversations = async () => {
     if (!user) return;
@@ -673,7 +714,33 @@ export function ChatWindow() {
                 const data = JSON.parse(line.slice(6));
 
                 if (data.error) {
-                  throw new Error(data.error);
+                  // Display user-friendly error message
+                  setIsStreaming(false);
+                  setStreamingMessage('');
+                  setIsThinking(false);
+                  setCurrentThinkingContent('');
+                  
+                  // Create an error message bubble
+                  const errorMessageId = 'error-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+                  const errorMessage: Message = {
+                    id: errorMessageId,
+                    conversation_id: conversation.id,
+                    user_id: user.id,
+                    role: 'assistant',
+                    content: `❌ **Error**: ${data.error}`,
+                    provider: conversation.model_provider,
+                    model: conversation.model_name,
+                    tokens_used: 0,
+                    cost_usd: null,
+                    response_time_ms: null,
+                    created_at: new Date().toISOString(),
+                    document_context: null,
+                    embedding: null,
+                    metadata: null
+                  };
+
+                  setMessages(prev => [...prev, errorMessage]);
+                  return;
                 }
 
                 // Handle thinking content for reasoning models
