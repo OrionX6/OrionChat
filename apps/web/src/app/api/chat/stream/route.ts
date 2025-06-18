@@ -449,6 +449,7 @@ export async function POST(request: NextRequest) {
               case 'anthropic':
                 return 8192;  // Claude 3.5 Haiku max output
               case 'google':
+              case 'google-vertex':
                 return 65536; // Gemini 2.5 Flash max output
               case 'deepseek':
                 return 64000; // DeepSeek R1 max output
@@ -502,7 +503,13 @@ export async function POST(request: NextRequest) {
               thinking: chunk.thinking,
               isThinking: chunk.isThinking
             });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            try {
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            } catch (error) {
+              // Client disconnected, stop streaming
+              console.log('Client disconnected during streaming');
+              break;
+            }
 
             if (chunk.done) {
               const endTime = Date.now();
@@ -554,7 +561,12 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          controller.close();
+          try {
+            controller.close();
+          } catch (error) {
+            // Controller already closed, ignore
+            console.log('Controller already closed');
+          }
         } catch (error) {
           console.error('Streaming error:', error);
           
@@ -596,8 +608,19 @@ export async function POST(request: NextRequest) {
             done: true,
             isError: true
           });
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
-          controller.close();
+          try {
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+          } catch (enqueueError) {
+            // Client already disconnected, can't send error message
+            console.log('Could not send error message, client disconnected');
+          }
+          
+          try {
+            controller.close();
+          } catch (error) {
+            // Controller already closed, ignore
+            console.log('Controller already closed in error handler');
+          }
         }
       }
     });

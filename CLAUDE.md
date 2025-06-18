@@ -114,7 +114,15 @@ Key tables:
 - `conversations` - Chat conversations with model configuration and settings
 - `messages` - Individual messages with embeddings, attachments, and metadata
 - `files` - File attachments with multi-provider upload support (stores `gemini_file_uri`, `anthropic_file_id`, `openai_file_id`)
-- `user_profiles` - User preferences and settings
+- `user_profiles` - User preferences and settings with individual columns:
+  - `preferred_model_name` - Default AI model (e.g., 'gpt-4o-mini')
+  - `preferred_model_provider` - Default provider (e.g., 'openai')
+  - `base_theme` - UI theme ('light', 'dark', 'system')
+  - `color_theme` - Color scheme ('default', 'ocean', 'forest', etc.)
+  - `font_family` - Typography ('sans', 'serif', 'mono', 'playfair', 'poppins', 'crimson')
+  - `preferred_language` - Interface language
+  - Usage tracking: `total_conversations`, `total_messages`, `total_tokens_used`, `total_cost_usd`
+  - Rate limits: `daily_message_limit`, `daily_token_limit`, `daily_cost_limit_usd`
 
 ## Important Development Notes
 
@@ -304,6 +312,8 @@ Claude 3.5 Haiku supports both PDF documents and image analysis. Key implementat
 2. Run `supabase db reset` to apply locally
 3. Regenerate types: `supabase gen types typescript --local`
 4. **Important**: If types don't match actual schema, manually extend types in component files
+
+**⚠️ Critical Note**: The `user_profiles` table uses individual columns (`preferred_model_name`, `preferred_model_provider`, etc.) NOT a JSONB `preferences` column. Always verify actual database schema before making changes to user profile queries.
 
 ### Testing Streaming
 - Use browser DevTools Network tab to monitor SSE connections

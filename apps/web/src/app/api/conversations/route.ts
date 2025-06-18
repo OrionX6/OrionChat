@@ -52,6 +52,7 @@ export async function POST(request: Request) {
         case 'anthropic':
           return 8192;  // Claude 3.5 Haiku max output
         case 'google':
+        case 'google-vertex':
           return 65536; // Gemini 2.5 Flash max output
         case 'deepseek':
           return 64000; // DeepSeek R1 max output

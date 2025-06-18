@@ -83,7 +83,7 @@ export class GeminiVertexProvider implements CostOptimizedProvider {
   async *stream(messages: ChatMessage[], options: StreamOptions = {}): AsyncIterable<StreamChunk> {
     try {
       const modelToUse = options.model || 'gemini-2.5-flash-preview-05-20';
-      const maxOutputTokens = Math.min(options.maxTokens || 8192, 8192);
+      const maxOutputTokens = Math.min(options.maxTokens || 65536, 65536);
       
       console.log(`🔥 VERTEX AI SETUP: Using model ${modelToUse} with maxOutputTokens: ${maxOutputTokens}, webSearch: ${options.webSearch}`);
       

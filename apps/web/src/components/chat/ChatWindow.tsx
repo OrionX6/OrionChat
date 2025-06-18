@@ -402,8 +402,15 @@ export function ChatWindow() {
 
   // Wrapper function for Sidebar to avoid passing React events to createNewConversation
   const handleNewConversation = useCallback(() => {
-    createNewConversation();
-  }, []);
+    // Use the default model for new conversations
+    const defaultModel = AVAILABLE_MODELS.find(m => m.name === defaultModelName);
+    if (defaultModel) {
+      createNewConversation(defaultModel.provider, defaultModel.name);
+    } else {
+      // Fallback to system default if user's default model is not found
+      createNewConversation(DEFAULT_MODEL.provider, DEFAULT_MODEL.name);
+    }
+  }, [defaultModelName]);
 
   const handleModelChange = async (provider: ModelProvider, modelName: string) => {
     // If no conversation exists, just update the selected model for future use
