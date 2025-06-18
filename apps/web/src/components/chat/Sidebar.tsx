@@ -203,10 +203,10 @@ export function Sidebar({
                           {conversation.title}
                         </h3>
                         <div className={cn(
-                          "absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 pl-8",
+                          "absolute right-0 top-0 bottom-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
                           isSelected 
-                            ? "bg-gradient-to-l from-primary/15 from-70% to-transparent" 
-                            : "bg-gradient-to-l from-card from-70% to-transparent"
+                            ? "bg-muted/50 px-2" 
+                            : "bg-gradient-to-l from-card from-70% to-transparent pr-2 pl-8"
                         )}>
                           <Button
                             variant="ghost"
