@@ -11,7 +11,8 @@ import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useMessageLimit } from "@/contexts/MessageLimitContext";
 import { createClient } from "@/lib/supabase/client";
-import { DEFAULT_MODEL, ModelProvider } from "@/lib/constants/models";
+import { DEFAULT_MODEL, ModelProvider, AVAILABLE_MODELS } from "@/lib/constants/models";
+import { useDefaultModel } from "@/hooks/useDefaultModel";
 import type { Database } from "@/lib/types/database";
 
 // Extended types to match actual database schema
@@ -68,6 +69,7 @@ export function ChatWindow() {
   });
   const { user } = useAuth();
   const { incrementUsage } = useMessageLimit();
+  const { defaultModelName } = useDefaultModel();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
@@ -94,6 +96,19 @@ export function ChatWindow() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingMessage]);
+
+  // Update selected model when default model changes (for new conversations only)
+  useEffect(() => {
+    if (defaultModelName && !currentConversation) {
+      const defaultModel = AVAILABLE_MODELS.find(m => m.name === defaultModelName);
+      if (defaultModel) {
+        setSelectedModel({
+          provider: defaultModel.provider,
+          name: defaultModel.name
+        });
+      }
+    }
+  }, [defaultModelName, currentConversation]);
 
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronDown, Zap, Eye, Wrench, Search, FileText, Brain, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
   ModelInfo, 
   ModelProvider
 } from "@/lib/constants/models";
+import { useEnabledModels } from "@/contexts/EnabledModelsContext";
 
 interface ModelSelectorProps {
   selectedModel: string;
@@ -30,8 +31,18 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ selectedModel, onModelChange, disabled = false, compact = false }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
+  const { getEnabledModels } = useEnabledModels();
   
-  const currentModel = AVAILABLE_MODELS.find(m => m.name === selectedModel);
+  const enabledModels = getEnabledModels();
+  const currentModel = enabledModels.find(m => m.name === selectedModel) || AVAILABLE_MODELS.find(m => m.name === selectedModel);
+  
+  // If the current model is not enabled, automatically switch to the first enabled model
+  useEffect(() => {
+    if (enabledModels.length > 0 && !enabledModels.find(m => m.name === selectedModel)) {
+      const firstEnabledModel = enabledModels[0];
+      onModelChange(firstEnabledModel.provider, firstEnabledModel.name);
+    }
+  }, [enabledModels, selectedModel, onModelChange]);
   
   const handleModelSelect = (model: ModelInfo) => {
     onModelChange(model.provider, model.name);
@@ -157,7 +168,7 @@ export function ModelSelector({ selectedModel, onModelChange, disabled = false, 
         </div>
         
         <div className="py-2">
-          {AVAILABLE_MODELS.map(renderModelItem)}
+          {enabledModels.map(renderModelItem)}
         </div>
         
         <div className="p-3 border-t flex items-center justify-between text-sm text-muted-foreground">

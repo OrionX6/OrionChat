@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FontProvider } from "@/contexts/FontContext";
 import { MessageLimitProvider } from "@/contexts/MessageLimitContext";
+import { EnabledModelsProvider } from "@/contexts/EnabledModelsContext";
 import { themeScript } from "@/lib/theme-script";
 
 const geistSans = Geist({
@@ -57,7 +58,9 @@ export default function RootLayout({
           <FontProvider>
             <AuthProvider>
               <MessageLimitProvider>
-                {children}
+                <EnabledModelsProvider>
+                  {children}
+                </EnabledModelsProvider>
               </MessageLimitProvider>
             </AuthProvider>
           </FontProvider>

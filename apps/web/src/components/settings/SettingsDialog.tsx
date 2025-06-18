@@ -21,6 +21,9 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useMessageUsage } from "@/hooks/useMessageUsage";
 import { useTheme, type ColorTheme, type BaseTheme } from "@/contexts/ThemeContext";
 import { useFont, type FontFamily } from "@/contexts/FontContext";
+import { useEnabledModels } from "@/contexts/EnabledModelsContext";
+import { AVAILABLE_MODELS } from "@/lib/constants/models";
+import { useDefaultModel } from "@/hooks/useDefaultModel";
 import {
   User,
   Palette,
@@ -43,6 +46,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { usage, loading: usageLoading } = useMessageUsage();
   const { baseTheme, colorTheme, setBaseTheme, setColorTheme } = useTheme();
   const { fontFamily, setFontFamily } = useFont();
+  const { isModelEnabled, toggleModel, enabledModels, getEnabledModels } = useEnabledModels();
+  const { defaultModelName, setDefaultModel } = useDefaultModel();
   const [activeTab, setActiveTab] = useState("account");
   
   // Mock user data - in real app, this would come from your user profile service
@@ -59,6 +64,83 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     { action: "New Chat", shortcut: "⌘ Shift O" },
     { action: "Toggle Sidebar", shortcut: "⌘ B" }
   ]);
+
+  // Helper function to get model styling
+  const getModelStyling = (modelId: string) => {
+    switch (modelId) {
+      case 'gpt-4o-mini':
+        return {
+          gradient: 'from-green-50 to-emerald-50 dark:from-green-950/10 dark:to-emerald-950/10',
+          dotColor: 'bg-green-500',
+          badgeColor: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+          badgeText: 'Fast'
+        };
+      case 'claude-3-5-haiku-20241022':
+        return {
+          gradient: 'from-orange-50 to-red-50 dark:from-orange-950/10 dark:to-red-950/10',
+          dotColor: 'bg-orange-500',
+          badgeColor: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+          badgeText: 'Balanced'
+        };
+      case 'gemini-2.0-flash-exp':
+        return {
+          gradient: 'from-blue-50 to-cyan-50 dark:from-blue-950/10 dark:to-cyan-950/10',
+          dotColor: 'bg-blue-500',
+          badgeColor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+          badgeText: 'Multimodal'
+        };
+      case 'gemini-2.5-flash-preview-05-20':
+        return {
+          gradient: 'from-indigo-50 to-purple-50 dark:from-indigo-950/10 dark:to-purple-950/10',
+          dotColor: 'bg-indigo-500',
+          badgeColor: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+          badgeText: 'Advanced'
+        };
+      case 'deepseek-reasoner':
+        return {
+          gradient: 'from-purple-50 to-violet-50 dark:from-purple-950/10 dark:to-violet-950/10',
+          dotColor: 'bg-purple-500',
+          badgeColor: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+          badgeText: 'Reasoning'
+        };
+      default:
+        return {
+          gradient: 'from-gray-50 to-slate-50 dark:from-gray-950/10 dark:to-slate-950/10',
+          dotColor: 'bg-gray-500',
+          badgeColor: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+          badgeText: 'Model'
+        };
+    }
+  };
+
+  // Helper function to get model capability badges
+  const getModelBadges = (model: typeof AVAILABLE_MODELS[0]) => {
+    const badges = [];
+    if (model.supportsVision) badges.push('Vision');
+    if (model.supportsWebSearch) badges.push('Web Search');
+    if (model.supportsFileUpload) badges.push('PDF Support');
+    if (model.supportsReasoning) badges.push('Chain of Thought');
+    if (model.supportsFunctions) badges.push('Functions');
+    
+    // Add specific badges based on model
+    switch (model.id) {
+      case 'gpt-4o-mini':
+        badges.push('Code Generation');
+        break;
+      case 'claude-3-5-haiku-20241022':
+        badges.push('Analysis', 'Writing');
+        break;
+      case 'gemini-2.0-flash-exp':
+      case 'gemini-2.5-flash-preview-05-20':
+        badges.push('1M Context');
+        break;
+      case 'deepseek-reasoner':
+        badges.push('Math & Logic', 'Cost Effective');
+        break;
+    }
+    
+    return badges;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -389,114 +471,95 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     </CardHeader>
                     <CardContent className="space-y-8 p-8">
                       <div className="space-y-6">
+                        {/* Default Model Selection */}
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-lg font-semibold mb-2">Default Model</h4>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Choose which model to use by default when starting new conversations
+                            </p>
+                          </div>
+                          <div className="grid gap-3">
+                            {getEnabledModels().map((model) => (
+                              <div
+                                key={model.id}
+                                className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:bg-muted/50 ${
+                                  defaultModelName === model.name
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border'
+                                }`}
+                                onClick={() => setDefaultModel(model.name)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-4 h-4 rounded-full border-2 transition-colors ${
+                                    defaultModelName === model.name
+                                      ? 'border-primary bg-primary'
+                                      : 'border-muted-foreground'
+                                  }`}>
+                                    {defaultModelName === model.name && (
+                                      <div className="w-full h-full rounded-full bg-white scale-50"></div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg">{model.icon}</span>
+                                      <span className="font-medium">{model.displayName}</span>
+                                      {defaultModelName === model.name && (
+                                        <Badge variant="secondary" className="text-xs">Default</Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {model.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Model Toggle Section */}
+                        <div className="border-t pt-6">
+                          <div className="mb-4">
+                            <h4 className="text-lg font-semibold mb-2">Available Models</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Toggle models on/off to customize your model picker
+                            </p>
+                          </div>
+                        </div>
+                        
                         <div className="grid gap-4">
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/10 dark:to-emerald-950/10 p-6 hover:shadow-md transition-all">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                  <h4 className="text-lg font-semibold">GPT-4o Mini</h4>
-                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                    Fast
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mb-3">Fast and efficient OpenAI model for everyday tasks</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="text-xs">Vision</Badge>
-                                  <Badge variant="outline" className="text-xs">PDF Support</Badge>
-                                  <Badge variant="outline" className="text-xs">Code Generation</Badge>
-                                </div>
-                              </div>
-                              <Switch defaultChecked />
-                            </div>
-                          </div>
-
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/10 dark:to-red-950/10 p-6 hover:shadow-md transition-all">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                                  <h4 className="text-lg font-semibold">Claude 3.5 Haiku</h4>
-                                  <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                                    Balanced
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mb-3">Anthropic's vision-capable model with advanced reasoning</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="text-xs">Vision</Badge>
-                                  <Badge variant="outline" className="text-xs">PDF Support</Badge>
-                                  <Badge variant="outline" className="text-xs">Analysis</Badge>
-                                  <Badge variant="outline" className="text-xs">Writing</Badge>
+                          {AVAILABLE_MODELS.map((model) => {
+                            const styling = getModelStyling(model.id);
+                            const badges = getModelBadges(model);
+                            
+                            return (
+                              <div key={model.id} className={`group relative overflow-hidden rounded-xl border bg-gradient-to-r ${styling.gradient} p-6 hover:shadow-md transition-all`}>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <div className={`w-3 h-3 rounded-full ${styling.dotColor}`}></div>
+                                      <h4 className="text-lg font-semibold">{model.displayName}</h4>
+                                      <Badge className={styling.badgeColor}>
+                                        {styling.badgeText}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-muted-foreground mb-3">{model.description}</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {badges.map((badge) => (
+                                        <Badge key={badge} variant="outline" className="text-xs">{badge}</Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <Switch 
+                                    checked={isModelEnabled(model.id)}
+                                    onCheckedChange={() => toggleModel(model.id)}
+                                    disabled={isModelEnabled(model.id) && enabledModels.size === 1}
+                                  />
                                 </div>
                               </div>
-                              <Switch defaultChecked />
-                            </div>
-                          </div>
-
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/10 dark:to-cyan-950/10 p-6 hover:shadow-md transition-all">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                  <h4 className="text-lg font-semibold">Gemini 2.0 Flash</h4>
-                                  <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                    Multimodal
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mb-3">Google's workhorse model with 1M context and multimodal I/O</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="text-xs">Web Search</Badge>
-                                  <Badge variant="outline" className="text-xs">PDF Support</Badge>
-                                  <Badge variant="outline" className="text-xs">Vision</Badge>
-                                  <Badge variant="outline" className="text-xs">1M Context</Badge>
-                                </div>
-                              </div>
-                              <Switch defaultChecked />
-                            </div>
-                          </div>
-
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/10 dark:to-purple-950/10 p-6 hover:shadow-md transition-all">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                                  <h4 className="text-lg font-semibold">Gemini 2.5 Flash</h4>
-                                  <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                    Advanced
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mb-3">Google's advanced model with enhanced capabilities and web search</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="text-xs">Web Search</Badge>
-                                  <Badge variant="outline" className="text-xs">PDF Support</Badge>
-                                  <Badge variant="outline" className="text-xs">Vision</Badge>
-                                  <Badge variant="outline" className="text-xs">1M Context</Badge>
-                                </div>
-                              </div>
-                              <Switch defaultChecked />
-                            </div>
-                          </div>
-
-                          <div className="group relative overflow-hidden rounded-xl border bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/10 dark:to-violet-950/10 p-6 hover:shadow-md transition-all">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                                  <h4 className="text-lg font-semibold">DeepSeek R1</h4>
-                                  <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                    Reasoning
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mb-3">Advanced reasoning model for complex problem solving</p>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="text-xs">Chain of Thought</Badge>
-                                  <Badge variant="outline" className="text-xs">Math & Logic</Badge>
-                                  <Badge variant="outline" className="text-xs">Cost Effective</Badge>
-                                </div>
-                              </div>
-                              <Switch defaultChecked />
-                            </div>
-                          </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </CardContent>
