@@ -51,29 +51,56 @@
 
 
 
+/* BULLETPROOF LAYOUT LOCK - DO NOT MODIFY */
+html {
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important; /* Completely lock scrolling at root level */
+  position: fixed !important; /* Lock html element */
+  top: 0 !important;
+  left: 0 !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-feature-settings: "rlig" 1, "calt" 1;
-  overflow-x: hidden; /* Prevent horizontal scrolling only */
-  height: 100vh; /* Ensure body takes full viewport height */
-  margin: 0; /* Remove default margin */
-  padding: 0; /* Remove default padding */
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important; /* Completely lock scrolling */
+  position: fixed !important; /* Lock body element */
+  top: 0 !important;
+  left: 0 !important;
 }
 
-html {
-  overflow-x: hidden; /* Prevent horizontal scrolling only */
-  height: 100vh; /* Ensure html takes full viewport height */
-  margin: 0; /* Remove default margin */
-  padding: 0; /* Remove default padding */
-}
-
-/* Ensure main app container behaves properly */
+/* Lock the Next.js root container */
 #__next {
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Lock any potential root containers */
+[data-nextjs-scroll-focus-boundary],
+main {
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Prevent any unexpected layout shifts */

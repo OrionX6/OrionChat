@@ -819,7 +819,7 @@ export function ChatWindow() {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-screen w-screen fixed inset-0 overflow-hidden">
       <Sidebar
         conversations={conversations}
         currentConversation={currentConversation}
@@ -837,7 +837,8 @@ export function ChatWindow() {
         
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto flex justify-center"
+          className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center max-h-full"
+          style={{ height: 'calc(100vh - 120px)' }} // Lock height calculation
         >
           <div className="w-full max-w-4xl p-6">
             {currentConversation ? (

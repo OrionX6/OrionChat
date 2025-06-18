@@ -279,20 +279,40 @@ export async function POST(request: NextRequest) {
 
       // Add multimodal content to user messages with proper attachment context
       if (msg.role === 'user') {
-        // For the latest message, use current attachments + unique conversation attachments for context
-        // For older messages, include conversation attachments for full context
+        // Smart attachment inclusion logic
         let attachmentsToInclude: AttachmentContent[] = [];
         
         if (index === messages.length - 1) {
-          // Latest message: current attachments take priority, supplement with conversation context
-          const seenIds = new Set(currentMessageAttachments.map(a => a.file_id || a.file_uri || ''));
-          attachmentsToInclude = [
-            ...currentMessageAttachments,
-            ...conversationAttachmentsProcessed.filter(a => !seenIds.has(a.file_id || a.file_uri || ''))
-          ];
+          // Latest message: prioritize current attachments
+          if (currentMessageAttachments.length > 0) {
+            // Check if user is explicitly referencing previous attachments
+            const messageContent = msg.content.toLowerCase();
+            const referencingPrevious = messageContent.includes('compare') || 
+                                      messageContent.includes('previous') ||
+                                      messageContent.includes('earlier') ||
+                                      messageContent.includes('document') ||
+                                      messageContent.includes('pdf') ||
+                                      messageContent.includes('both');
+            
+            if (referencingPrevious) {
+              // Include both current and previous attachments for comparison
+              const seenIds = new Set(currentMessageAttachments.map(a => a.file_id || a.file_uri || ''));
+              attachmentsToInclude = [
+                ...currentMessageAttachments,
+                ...conversationAttachmentsProcessed.filter(a => !seenIds.has(a.file_id || a.file_uri || ''))
+              ];
+            } else {
+              // Focus only on current attachments
+              attachmentsToInclude = currentMessageAttachments;
+            }
+          } else {
+            // If no new attachments, provide conversation context for follow-up questions
+            attachmentsToInclude = conversationAttachmentsProcessed;
+          }
         } else {
-          // Older messages: include conversation attachments for context
-          attachmentsToInclude = conversationAttachmentsProcessed;
+          // Historical messages: only include attachments that were originally part of that message
+          // This maintains the original conversation flow without cross-contamination
+          attachmentsToInclude = [];
         }
 
         if (attachmentsToInclude.length > 0) {

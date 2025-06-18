@@ -2,28 +2,21 @@
 
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
-import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
+import { ChartDetector } from "@/components/charts/ChartDetector";
+import { MermaidDiagram } from "@/components/charts/MermaidDiagram";
 
 interface StreamingMessageBubbleProps {
   content: string;
 }
 
-// Function to preprocess content and wrap standalone LaTeX commands in math delimiters
+// Function to preprocess content - NO automatic LaTeX wrapping
 function preprocessMathContent(content: string): string {
-  // Pattern to match standalone LaTeX commands that aren't already wrapped in math delimiters
-  const latexCommandPattern = /(?<!\$)\\(?:boxed|frac|sum|int|prod|lim|sqrt|text|mathbf|mathit|mathrm|operatorname|left|right|begin|end)\b[^$]*?(?:\{[^}]*\}|\[[^\]]*\])*(?!\$)/g;
-
-  let processedContent = content;
-
-  // Wrap standalone LaTeX commands
-  processedContent = processedContent.replace(latexCommandPattern, (match) => {
-    return `$${match}$`;
-  });
-
-  return processedContent;
+  // DO NOT automatically wrap anything as math
+  // Only process content that's already explicitly marked with $ or $$
+  // This prevents corruption of regular text with numbers/symbols
+  return content;
 }
 
 function parseStreamingContent(content: string) {
@@ -179,19 +172,29 @@ export const StreamingMessageBubble = memo(function StreamingMessageBubble({ con
             } else {
               return (
                 <div key={index} className={`${contentParts.some(part => part.type === 'code') ? 'px-4 py-3' : ''} relative`}>
+                  {/* Chart Detection for streaming content */}
+                  <ChartDetector content={part.content} />
+                  
                   <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
                     <ReactMarkdown
-                      remarkPlugins={[remarkMath, remarkGfm]}
-                      rehypePlugins={[rehypeKatex]}
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[]}
                       components={{
                         code({ node, inline, className, children, ...props }: any) {
                           const match = /language-(\w+)/.exec(className || '');
+                          const language = match?.[1];
+                          const code = String(children).replace(/\n$/, '');
+                          
                           return !inline && match ? (
                             <div className="not-prose w-full max-w-none -my-3 first:mt-0 last:mb-0">
-                              <CodeBlock
-                                code={String(children).replace(/\n$/, '')}
-                                language={match[1]}
-                              />
+                              {language === 'mermaid' ? (
+                                <MermaidDiagram chart={code} />
+                              ) : (
+                                <CodeBlock
+                                  code={code}
+                                  language={language}
+                                />
+                              )}
                             </div>
                           ) : (
                             <code className="bg-muted px-1 py-0.5 rounded text-base" {...props}>

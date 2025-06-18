@@ -2,12 +2,12 @@
 
 import { memo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
-import rehypeKatex from "rehype-katex";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Copy, RotateCcw, FileText, Image as ImageIcon, Download } from "lucide-react";
+import { ChartDetector } from "@/components/charts/ChartDetector";
+import { MermaidDiagram } from "@/components/charts/MermaidDiagram";
 import type { Database } from "@/lib/types/database";
 import Image from "next/image";
 import { CollapsibleThinking } from "./CollapsibleThinking";
@@ -30,21 +30,12 @@ interface MessageBubbleProps {
   onRetry?: () => void;
 }
 
-// Function to preprocess content and wrap standalone LaTeX commands in math delimiters
+// Function to preprocess content - NO automatic LaTeX wrapping
 function preprocessMathContent(content: string): string {
-  let processedContent = content;
-
-  // More sophisticated pattern to match complete LaTeX expressions
-  // This handles nested braces and complex expressions like \boxed{6:00 \text{ AM the next day}}
-  const latexPattern = /(?<!\$)\\(?:boxed|frac|sum|int|prod|lim|sqrt|text|mathbf|mathit|mathrm|operatorname|left|right|begin|end)\b(?:\{(?:[^{}]|\{[^{}]*\})*\}|\[[^\]]*\])*(?!\$)/g;
-
-  // Find all matches and wrap them
-  processedContent = processedContent.replace(latexPattern, (match) => {
-    // Don't wrap if it's already inside math delimiters
-    return `$${match}$`;
-  });
-
-  return processedContent;
+  // DO NOT automatically wrap anything as math
+  // Only process content that's already explicitly marked with $ or $$
+  // This prevents corruption of regular text with numbers/symbols
+  return content;
 }
 
 export const MessageBubble = memo(function MessageBubble({ message, onRetry }: MessageBubbleProps) {
@@ -148,19 +139,30 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
               {message.content}
             </p>
           ) : (
-            <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
-              <ReactMarkdown
-                remarkPlugins={[remarkMath, remarkGfm]}
-                rehypePlugins={[rehypeKatex]}
+            <>
+              {/* Chart Detection */}
+              <ChartDetector content={message.content} />
+              
+              <div className="prose prose-base max-w-none dark:prose-invert prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0">
+                <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[]}
                 components={{
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
+                    const language = match?.[1];
+                    const code = String(children).replace(/\n$/, '');
+                    
                     return !inline && match ? (
                       <div className="not-prose w-full max-w-none -my-3 first:mt-0 last:mb-0">
-                        <CodeBlock
-                          code={String(children).replace(/\n$/, '')}
-                          language={match[1]}
-                        />
+                        {language === 'mermaid' ? (
+                          <MermaidDiagram chart={code} />
+                        ) : (
+                          <CodeBlock
+                            code={code}
+                            language={language}
+                          />
+                        )}
                       </div>
                     ) : (
                       <code className="bg-muted px-1 py-0.5 rounded text-base" {...props}>
@@ -242,6 +244,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                 {preprocessMathContent(message.content)}
               </ReactMarkdown>
             </div>
+            </>
           )}
         </div>
         <div className={`flex items-center gap-2 mt-2 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
