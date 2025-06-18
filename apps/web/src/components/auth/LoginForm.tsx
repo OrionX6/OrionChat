@@ -11,6 +11,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   
   const { signIn, signUp } = useAuth()
@@ -19,13 +20,24 @@ export function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     const result = isSignUp 
       ? await signUp(email, password)
       : await signIn(email, password)
 
+    console.log('Auth result:', result) // Debug log
+
     if (result.error) {
       setError(result.error)
+    } else if (isSignUp && result.success) {
+      if (result.needsConfirmation) {
+        setSuccess('Account created successfully! Please check your email to verify your account before signing in.')
+      } else {
+        setSuccess('Account created and verified successfully! You can now sign in.')
+      }
+      setEmail('')
+      setPassword('')
     }
 
     setLoading(false)
@@ -68,6 +80,11 @@ export function LoginForm() {
                 {error}
               </div>
             )}
+            {success && (
+              <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                {success}
+              </div>
+            )}
             <Button 
               type="submit" 
               className="w-full" 
@@ -80,7 +97,11 @@ export function LoginForm() {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError('')
+                setSuccess('')
+              }}
               className="text-sm text-muted-foreground hover:underline"
             >
               {isSignUp 

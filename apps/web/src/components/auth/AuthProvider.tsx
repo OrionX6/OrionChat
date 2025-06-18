@@ -19,10 +19,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
+  // Helper function to ensure user profile exists
+  const ensureUserProfile = async (user: User) => {
+    try {
+      // Check if user profile exists
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it
+        console.log('Creating missing user profile for user:', user.id)
+        
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email!,
+            display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email!.split('@')[0],
+            avatar_url: user.user_metadata?.avatar_url,
+            role: 'user',
+            preferred_model_provider: 'openai',
+            preferred_model_name: 'gpt-4o-mini',
+            preferred_language: 'en',
+            base_theme: 'system',
+            color_theme: 'default',
+            font_family: 'sans'
+          })
+
+        if (insertError) {
+          console.error('Failed to create user profile:', insertError)
+        } else {
+          console.log('Successfully created user profile')
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring user profile:', error)
+    }
+  }
+
   useEffect(() => {
     // Get initial user
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        await ensureUserProfile(user)
+      }
+      
       setUser(user)
       setLoading(false)
     }
@@ -32,7 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null)
+        const user = session?.user ?? null
+        
+        if (user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          await ensureUserProfile(user)
+        }
+        
+        setUser(user)
         setLoading(false)
       }
     )
@@ -41,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase.auth])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -50,11 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message }
     }
     
-    return {}
+    return { success: true, user: data.user }
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
@@ -63,7 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message }
     }
     
-    return {}
+    // Return success info including whether email confirmation is needed
+    return { 
+      success: true,
+      needsConfirmation: !data.user?.email_confirmed_at,
+      user: data.user 
+    }
   }
 
   const signOut = async () => {
