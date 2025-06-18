@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMessageUsage } from "@/hooks/useMessageUsage";
 import { useTheme, type ColorTheme, type BaseTheme } from "@/contexts/ThemeContext";
 import { useFont, type FontFamily } from "@/contexts/FontContext";
@@ -65,14 +66,33 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     getFileIcon 
   } = useUserAttachments();
   const [activeTab, setActiveTab] = useState("account");
+  const { profile, loading: profileLoading, updateProfile } = useUserProfile();
   
-  // Mock user data - in real app, this would come from your user profile service
-  const [userProfile, setUserProfile] = useState({
-    name: user?.user_metadata?.full_name || "Nathan Johns",
-    email: user?.email || "orion0508@gmail.com",
-    about: "Engineer, student, etc.",
-    interests: "Interests, values, or preferences to keep in mind"
-  });
+  // Local state for form inputs
+  const [displayName, setDisplayName] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Initialize display name from profile
+  React.useEffect(() => {
+    if (profile?.display_name) {
+      setDisplayName(profile.display_name);
+    }
+  }, [profile]);
+
+  // Handle saving display name
+  const handleSaveDisplayName = async () => {
+    if (!displayName.trim()) return;
+    
+    try {
+      setIsUpdating(true);
+      await updateProfile({ display_name: displayName.trim() });
+    } catch (error) {
+      console.error('Error updating display name:', error);
+      // You might want to show a toast or error message here
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
 
   const [shortcuts] = useState([
@@ -216,12 +236,17 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   <div className="flex items-center gap-6 p-6 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl border">
                     <Avatar className="h-20 w-20 ring-2 ring-primary/20">
                       <AvatarFallback className="text-xl font-bold bg-gradient-to-br from-primary to-secondary text-white">
-                        {userProfile.name.split(' ').map((n: string) => n[0]).join('')}
+                        {profile?.display_name ? 
+                          profile.display_name.split(' ').map((n: string) => n[0]).join('') :
+                          user?.email?.charAt(0).toUpperCase() || 'U'
+                        }
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h3 className="text-2xl font-bold">{userProfile.name}</h3>
-                      <p className="text-muted-foreground">{userProfile.email}</p>
+                      <h3 className="text-2xl font-bold">
+                        {profileLoading ? 'Loading...' : (profile?.display_name || 'User')}
+                      </h3>
+                      <p className="text-muted-foreground">{user?.email}</p>
                       <Badge variant="secondary" className="mt-2 bg-primary/10 text-primary border-primary/20">
                         Pro Plan
                       </Badge>
@@ -241,14 +266,24 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <CardContent className="space-y-6 p-6">
                       <div className="space-y-3">
                         <Label htmlFor="name" className="text-base font-medium">What should OrionChat call you?</Label>
-                        <Input
-                          id="name"
-                          value={userProfile.name}
-                          onChange={(e) => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Enter your name"
-                          className="h-12 text-base border-2 focus:border-primary transition-colors"
-                        />
-                        <p className="text-xs text-muted-foreground">{userProfile.name.length}/50</p>
+                        <div className="flex gap-2">
+                          <Input
+                            id="name"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="Enter your name"
+                            className="h-12 text-base border-2 focus:border-primary transition-colors flex-1"
+                            disabled={profileLoading}
+                          />
+                          <Button 
+                            onClick={handleSaveDisplayName}
+                            disabled={isUpdating || !displayName.trim() || displayName === profile?.display_name}
+                            className="h-12 px-6"
+                          >
+                            {isUpdating ? 'Saving...' : 'Save'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{displayName.length}/50</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -732,7 +767,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                           <Input 
                             type="email" 
                             placeholder="your.email@example.com"
-                            defaultValue={userProfile.email}
+                            defaultValue={user?.email || ''}
                             className="h-12 text-base border-2 focus:border-primary"
                           />
                         </div>
