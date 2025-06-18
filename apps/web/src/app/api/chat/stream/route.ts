@@ -461,13 +461,17 @@ export async function POST(request: NextRequest) {
           const modelMaxTokens = getModelMaxTokens(provider);
           const maxTokensUsed = Math.min(conversation.max_tokens || modelMaxTokens, modelMaxTokens);
           // Smart provider routing: Use Vertex AI for Gemini models when search is enabled
+          // BUT only if no file attachments are present (they use different file systems)
           let actualProvider = provider;
           const isGeminiModel = provider === 'google' && (model === 'gemini-2.0-flash-exp' || model === 'gemini-2.5-flash-preview-05-20');
-          const shouldUseVertexAI = isGeminiModel && webSearch && conversation.is_web_search_enabled;
+          const hasFileAttachments = allConversationAttachments.length > 0 || (attachments && attachments.length > 0);
+          const shouldUseVertexAI = isGeminiModel && webSearch && conversation.is_web_search_enabled && !hasFileAttachments;
           
           if (shouldUseVertexAI) {
             actualProvider = 'google-vertex';
             console.log(`🔄 Smart routing: Using Vertex AI for ${model} with search enabled`);
+          } else if (isGeminiModel && webSearch && conversation.is_web_search_enabled && hasFileAttachments) {
+            console.log(`⚠️ Cannot use Vertex AI with file attachments - files uploaded to regular Gemini API. Using regular Gemini instead.`);
           }
           
           console.log(`🚀 Starting generation for ${actualProvider}/${model} with maxTokens: ${maxTokensUsed} (model limit: ${modelMaxTokens})`);
